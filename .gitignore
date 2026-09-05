@@ -1,0 +1,34 @@
+node_modules/
+.node_modules.lock
+.vercel/
+dist/
+.output/
+.nitro/
+.tanstack/
+screenshots/
+artifacts/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Tooling caches
+.dotnet/
+.nuget/
+
+# .NET build output
+wasm/bin/
+wasm/obj/
+wasm/publish/
+**/bin/
+**/obj/
+
+# Vendor sample library (ship a subset in public/examples)
+vendor/CalcpadCE/Examples/
+
+# Local tooling / preview chrome
+.grok/
+AGENTS.md
+AGENTS.project.md
+migrations/
