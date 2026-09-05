@@ -79,6 +79,7 @@ export function Workspace() {
   const [syntaxOpen, setSyntaxOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<"code" | "paper">("paper");
   const [mounted, setMounted] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
   const [focusLine, setFocusLine] = useState<{ line: number; key: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<number | null>(null);
@@ -87,6 +88,11 @@ export function Workspace() {
 
   useEffect(() => {
     setMounted(true);
+    const mq = window.matchMedia("(min-width: 768px)");
+    const apply = () => setIsDesktop(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, []);
 
   const run = useCallback(() => {
@@ -296,7 +302,8 @@ export function Workspace() {
         </div>
 
         <div className="min-h-0 flex-1">
-          <Group orientation="horizontal" className="hidden h-full md:flex">
+          {isDesktop ? (
+          <Group orientation="horizontal" className="h-full">
             <Panel defaultSize={46} minSize={28} className="min-h-0 print:hidden">
               <CodeEditor value={source} onChange={setSource} onRun={run} focusLine={focusLine} />
             </Panel>
@@ -310,7 +317,8 @@ export function Workspace() {
               />
             </Panel>
           </Group>
-          <div className="flex h-full min-h-0 flex-col md:hidden print:hidden">
+          ) : (
+          <div className="flex h-full min-h-0 flex-col print:hidden">
             {mobileTab === "code" ? (
               <CodeEditor value={source} onChange={setSource} onRun={run} focusLine={focusLine} />
             ) : (
@@ -324,6 +332,7 @@ export function Workspace() {
               </div>
             )}
           </div>
+          )}
         </div>
 
         <footer className="flex h-9 shrink-0 items-center gap-3 border-t border-border px-3 text-[11px] text-muted-foreground print:hidden">

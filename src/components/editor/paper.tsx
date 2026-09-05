@@ -95,11 +95,13 @@ export function Paper({
     root.querySelectorAll(".dvcs:has(.block) > :first-child").forEach((el) => {
       (el as HTMLElement).innerHTML = "&hairsp;";
     });
-    const scripts = runEmbeddedScripts(root, html).catch((err) => {
+    const ac = new AbortController();
+    void runEmbeddedScripts(html, ac.signal).catch((err) => {
+      if (ac.signal.aborted) return;
       console.warn("[calcpad] embedded script failed", err);
     });
     return () => {
-      void scripts;
+      ac.abort();
       root.removeEventListener("click", onClick);
       root.removeEventListener("change", onChange);
     };

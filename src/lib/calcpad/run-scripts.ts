@@ -1,21 +1,31 @@
 const loadedSrc = new Set<string>();
 const loading = new Map<string, Promise<void>>();
 
+type ExtractedScript = { src: string | null; code: string };
+
+function extractScripts(html: string): ExtractedScript[] {
+  const out: ExtractedScript[] = [];
+  const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(html))) {
+    const attrs = match[1] ?? "";
+    const srcMatch = attrs.match(/\bsrc\s*=\s*("([^"]*)"|'([^']*)')/i);
+    const src = srcMatch?.[2] ?? srcMatch?.[3] ?? null;
+    out.push({ src, code: match[2] ?? "" });
+  }
+  return out;
+}
+
 function loadExternalScript(src: string): Promise<void> {
   if (loadedSrc.has(src)) return Promise.resolve();
   const pending = loading.get(src);
   if (pending) return pending;
 
-  const absolute = new URL(src, window.location.href).href;
-  if ([...document.scripts].some((s) => s.src === absolute)) {
-    loadedSrc.add(src);
-    return Promise.resolve();
-  }
-
   const task = new Promise<void>((resolve, reject) => {
     const script = document.createElement("script");
     script.src = src;
     script.async = false;
+    script.dataset.calcpadCdn = "1";
     script.onload = () => {
       loadedSrc.add(src);
       resolve();
@@ -37,23 +47,17 @@ function runInlineScript(code: string) {
 }
 
 /**
- * innerHTML does not execute <script>. Calcpad worksheets emit Plotly/three.js/d3
- * that way, so we replay src tags (once) then inline code, in document order.
+ * React innerHTML inserts inert <script> nodes (they appear in document.scripts
+ * but never run). Always parse the engine HTML string and load real tags into
+ * <head>, then run inline code.
  */
-export async function runEmbeddedScripts(root: HTMLElement, html: string): Promise<void> {
-  let scripts = Array.from(root.querySelectorAll("script"));
-  if (scripts.length === 0 && /<script/i.test(html)) {
-    scripts = Array.from(new DOMParser().parseFromString(html, "text/html").querySelectorAll("script"));
-  }
-  for (const node of scripts) {
-    const src = node.getAttribute("src");
-    if (src) {
-      node.remove();
-      await loadExternalScript(src);
+export async function runEmbeddedScripts(html: string, signal?: AbortSignal): Promise<void> {
+  for (const item of extractScripts(html)) {
+    if (signal?.aborted) return;
+    if (item.src) {
+      await loadExternalScript(item.src);
       continue;
     }
-    const code = node.textContent ?? "";
-    node.remove();
-    if (code.trim()) runInlineScript(code);
+    if (item.code.trim()) runInlineScript(item.code);
   }
 }
