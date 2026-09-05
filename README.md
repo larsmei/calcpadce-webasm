@@ -33,6 +33,8 @@ examples/
 
 Apache already serving `.wasm` as `application/wasm` is enough. The included `.htaccess` sets MIME types and a SPA fallback.
 
+On first visit the app loads **`examples/start.cpd`**. If that file is missing (or Apache falls back to `index.html`), it uses the built-in cylinder sample. Replace `examples/start.cpd` on the server to change the default worksheet without rebuilding. Reset in the toolbar does the same.
+
 Build the static site yourself:
 
 ```bash

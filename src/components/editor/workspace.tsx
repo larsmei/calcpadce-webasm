@@ -24,6 +24,12 @@ import { bootEngine, optionsForView, parseWorksheet } from "@/lib/calcpad/engine
 import { applyInputValues } from "@/lib/calcpad/inputs";
 import { useCalcpadStore } from "@/lib/calcpad/store";
 import { hasUiDirective, type ViewMode } from "@/lib/calcpad/types";
+import {
+  START_FILE_NAME,
+  fetchStartWorksheet,
+  isEmbeddedDefault,
+  waitForStoreHydration,
+} from "@/lib/calcpad/start-file";
 import { cn } from "@/lib/utils";
 import { assetUrl } from "@/lib/calcpad/asset-url";
 import { exportPdfReport } from "@/lib/calcpad/export-pdf";
@@ -128,23 +134,53 @@ export function Workspace() {
     run();
   }, [run, setViewMode]);
 
+  const loadWorksheet = useCallback(
+    (text: string, name: string) => {
+      sourceRef.current = text;
+      setSource(text);
+      setFileName(name);
+      setUiOverrides({});
+      if (hasUiDirective(text)) setViewMode("form");
+    },
+    [setSource, setFileName, setUiOverrides, setViewMode],
+  );
+
+  const handleReset = useCallback(async () => {
+    const start = await fetchStartWorksheet();
+    if (start) {
+      loadWorksheet(start, START_FILE_NAME);
+      return;
+    }
+    resetWorksheet();
+  }, [loadWorksheet, resetWorksheet]);
+
   useEffect(() => {
     let cancelled = false;
     setStatus("booting");
-    bootEngine()
-      .then(() => {
+    (async () => {
+      try {
+        await waitForStoreHydration(useCalcpadStore.persist);
         if (cancelled) return;
+        const state = useCalcpadStore.getState();
+        const seedStart = isEmbeddedDefault(state.source, state.fileName);
+        const [start] = await Promise.all([
+          seedStart ? fetchStartWorksheet() : Promise.resolve(null),
+          bootEngine(),
+        ]);
+        if (cancelled) return;
+        if (start) loadWorksheet(start, START_FILE_NAME);
+        else sourceRef.current = useCalcpadStore.getState().source;
         setStatus("ready");
         run();
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (cancelled) return;
         setStatus("error", err instanceof Error ? err.message : String(err));
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [run, setStatus]);
+  }, [run, setStatus, loadWorksheet]);
 
   useEffect(() => {
     if (!autoRun) return;
@@ -196,13 +232,6 @@ export function Workspace() {
       }
     }
     if (changed) setUiOverrides(merged);
-  }
-
-  function loadWorksheet(text: string, name: string) {
-    setSource(text);
-    setFileName(name);
-    setUiOverrides({});
-    if (hasUiDirective(text)) setViewMode("form");
   }
 
   function switchView(next: ViewMode) {
@@ -380,11 +409,11 @@ export function Workspace() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon-sm" variant="ghost" className="hidden sm:inline-flex" onClick={resetWorksheet}>
+                <Button size="icon-sm" variant="ghost" className="hidden sm:inline-flex" onClick={() => void handleReset()}>
                   <RotateCcw className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Reset sample</TooltipContent>
+              <TooltipContent>Reset to examples/{START_FILE_NAME}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
