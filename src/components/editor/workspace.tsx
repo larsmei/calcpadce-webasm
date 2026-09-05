@@ -20,7 +20,7 @@ import { Paper } from "@/components/editor/paper";
 import { SettingsDialog } from "@/components/editor/settings-dialog";
 import { ExamplesPanel } from "@/components/editor/examples-panel";
 import { SyntaxSheet } from "@/components/editor/syntax-sheet";
-import { bootEngine, optionsForView, parseWorksheet } from "@/lib/calcpad/engine";
+import { bootEngine, optionsForView, parseWorksheet, worksheetParseKey } from "@/lib/calcpad/engine";
 import { applyInputValues } from "@/lib/calcpad/inputs";
 import { useCalcpadStore } from "@/lib/calcpad/store";
 import { hasUiDirective, type ViewMode } from "@/lib/calcpad/types";
@@ -101,6 +101,9 @@ export function Workspace() {
   const timerRef = useRef<number | null>(null);
   const sourceRef = useRef(source);
   sourceRef.current = source;
+  const runningRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const lastKeyRef = useRef("");
 
   useEffect(() => {
     setMounted(true);
@@ -112,20 +115,51 @@ export function Workspace() {
   }, []);
 
   const run = useCallback(() => {
-    try {
-      setStatus("running");
-      const t0 = performance.now();
-      const state = useCalcpadStore.getState();
-      const result = parseWorksheet(
-        sourceRef.current,
-        optionsForView(state.options, state.viewMode, state.uiOverrides, state.fileName),
-      );
-      setResult(result.html, result.errors, Math.round(performance.now() - t0));
-      setMobileTab("paper");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setStatus("error", message);
-    }
+    dirtyRef.current = true;
+    if (runningRef.current) return;
+    runningRef.current = true;
+    void (async () => {
+      try {
+        while (dirtyRef.current) {
+          dirtyRef.current = false;
+          const snap = useCalcpadStore.getState();
+          if (snap.status === "idle" || snap.status === "booting") continue;
+          const src = sourceRef.current;
+          const key = worksheetParseKey(
+            src,
+            snap.options,
+            snap.viewMode,
+            snap.uiOverrides,
+            snap.fileName,
+          );
+          if (key === lastKeyRef.current) continue;
+          setStatus("running");
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          if (dirtyRef.current) continue;
+          const t0 = performance.now();
+          const latest = useCalcpadStore.getState();
+          const result = parseWorksheet(
+            sourceRef.current,
+            optionsForView(latest.options, latest.viewMode, latest.uiOverrides, latest.fileName),
+          );
+          lastKeyRef.current = worksheetParseKey(
+            sourceRef.current,
+            latest.options,
+            latest.viewMode,
+            latest.uiOverrides,
+            latest.fileName,
+          );
+          setResult(result.html, result.errors, Math.round(performance.now() - t0));
+          setMobileTab("paper");
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setStatus("error", message);
+      } finally {
+        runningRef.current = false;
+        if (dirtyRef.current) run();
+      }
+    })();
   }, [setResult, setStatus]);
 
   const handleRun = useCallback(() => {
@@ -139,6 +173,7 @@ export function Workspace() {
   const loadWorksheet = useCallback(
     (text: string, name: string, overrides?: Record<string, string>) => {
       sourceRef.current = text;
+      lastKeyRef.current = "";
       setSource(text);
       setFileName(name);
       setUiOverrides(overrides ?? readUiOverrides(text));
@@ -210,11 +245,12 @@ export function Workspace() {
   useEffect(() => {
     if (!autoRun) return;
     if (timerRef.current) window.clearTimeout(timerRef.current);
+    const delay = source.length > 80_000 ? 900 : source.length > 12_000 ? 420 : 160;
     timerRef.current = window.setTimeout(() => {
       const current = useCalcpadStore.getState().status;
       if (current === "idle" || current === "booting") return;
       run();
-    }, 480);
+    }, delay);
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };

@@ -1,10 +1,28 @@
-import type { EngineOptions, ParseResult, ViewMode } from "./types";
+import type { EngineOptions, ParseError, ParseResult, ViewMode } from "./types";
 import { assetUrl } from "./asset-url";
+import { detachInlineImages, reattachInlineImages } from "./paste-image";
+
+type ParseRawFn = (source: string, optionsJson: string) => string;
+type PingFn = () => string;
+
+type WasmExports = {
+  Calcpad?: {
+    Wasm?: {
+      CalcpadBridge?: {
+        ParseRaw?: ParseRawFn;
+        Ping?: PingFn;
+      };
+    };
+  };
+};
 
 declare global {
   interface Window {
     Blazor?: {
       start: (opts?: Record<string, unknown>) => Promise<void>;
+      runtime?: {
+        getAssemblyExports: (assembly: string) => Promise<WasmExports>;
+      };
     };
     DotNet?: {
       invokeMethod: <T>(assembly: string, method: string, ...args: unknown[]) => T;
@@ -25,6 +43,8 @@ function frameworkUrl(name = ""): string {
 
 let bootPromise: Promise<void> | null = null;
 let assembliesReady = false;
+let parseRawFn: ParseRawFn | null = null;
+let pingFn: PingFn | null = null;
 
 function loadClassicScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -71,23 +91,34 @@ function loadBootResource(
   return frameworkUrl(name);
 }
 
-function assemblyAvailable(): boolean {
+function pingDotNet(): boolean {
+  if (pingFn) {
+    try {
+      return pingFn() === "ok";
+    } catch {
+      return false;
+    }
+  }
   if (!window.DotNet?.invokeMethod) return false;
   try {
-    window.DotNet.invokeMethod<string>(ASSEMBLY, "Parse", "0", "{}");
-    return true;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return !message.toLowerCase().includes("no loaded assembly");
+    return window.DotNet.invokeMethod<string>(ASSEMBLY, "Ping") === "ok";
+  } catch {
+    try {
+      window.DotNet.invokeMethod<string>(ASSEMBLY, "Parse", "0", "{}");
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return !message.toLowerCase().includes("no loaded assembly");
+    }
   }
 }
 
 export function isEngineReady(): boolean {
-  return assembliesReady && assemblyAvailable();
+  return assembliesReady && pingDotNet();
 }
 
 export async function bootEngine(): Promise<void> {
-  if (assembliesReady && assemblyAvailable()) return;
+  if (assembliesReady && pingDotNet()) return;
   if (bootPromise) return bootPromise;
 
   bootPromise = (async () => {
@@ -103,8 +134,17 @@ export async function bootEngine(): Promise<void> {
         throw err;
       }
     }
+    try {
+      const exported = await window.Blazor.runtime?.getAssemblyExports(ASSEMBLY);
+      const bridge = exported?.Calcpad?.Wasm?.CalcpadBridge;
+      if (bridge?.ParseRaw) parseRawFn = bridge.ParseRaw.bind(bridge);
+      if (bridge?.Ping) pingFn = bridge.Ping.bind(bridge);
+    } catch {
+      parseRawFn = null;
+      pingFn = null;
+    }
     const deadline = Date.now() + 45_000;
-    while (!assemblyAvailable()) {
+    while (!pingDotNet()) {
       if (Date.now() > deadline) {
         throw new Error("WebAssembly runtime started but Calcpad.Core is not ready.");
       }
@@ -118,6 +158,8 @@ export async function bootEngine(): Promise<void> {
   } catch (err) {
     bootPromise = null;
     assembliesReady = false;
+    parseRawFn = null;
+    pingFn = null;
     throw err;
   }
 }
@@ -138,16 +180,19 @@ export function optionsForView(
   };
 }
 
-export function parseWorksheet(source: string, options: EngineOptions): ParseResult {
-  if (!window.DotNet) {
-    throw new Error("Engine is not ready.");
+function decodeParsePayload(raw: string): ParseResult {
+  const nl = raw.indexOf("\n");
+  if (nl > 0 && raw.startsWith("{")) {
+    const head = raw.slice(0, nl);
+    if (head.includes('"errors"') && !head.includes('"html"')) {
+      const meta = JSON.parse(head) as { errors?: ParseError[]; ok?: boolean };
+      return {
+        html: raw.slice(nl + 1),
+        errors: meta.errors ?? [],
+        ok: Boolean(meta.ok),
+      };
+    }
   }
-  const raw = window.DotNet.invokeMethod<string>(
-    ASSEMBLY,
-    "Parse",
-    source,
-    JSON.stringify(options),
-  );
   const parsed = JSON.parse(raw) as ParseResult;
   return {
     html: parsed.html ?? "",
@@ -156,10 +201,38 @@ export function parseWorksheet(source: string, options: EngineOptions): ParseRes
   };
 }
 
+export function parseWorksheet(source: string, options: EngineOptions): ParseResult {
+  const detached = detachInlineImages(source);
+  const opts = JSON.stringify(options);
+  let payload: string;
+  if (parseRawFn) {
+    payload = parseRawFn(detached.source, opts);
+  } else if (window.DotNet) {
+    payload = window.DotNet.invokeMethod<string>(ASSEMBLY, "Parse", detached.source, opts);
+  } else {
+    throw new Error("Engine is not ready.");
+  }
+  const result = decodeParsePayload(payload);
+  if (detached.images.length) {
+    result.html = reattachInlineImages(result.html, detached.images);
+  }
+  return result;
+}
+
 export async function parseWorksheetAsync(
   source: string,
   options: EngineOptions,
 ): Promise<ParseResult> {
   await bootEngine();
   return parseWorksheet(source, options);
+}
+
+export function worksheetParseKey(
+  source: string,
+  options: EngineOptions,
+  viewMode: ViewMode,
+  uiOverrides: Record<string, string>,
+  fileName: string,
+) {
+  return `${viewMode}\0${fileName}\0${options.decimals}\0${options.degrees}\0${Number(options.complex)}\0${Number(options.substitute)}\0${options.units}\0${Number(options.isUs)}\0${options.plotWidth}\0${options.plotHeight}\0${JSON.stringify(uiOverrides)}\0${source}`;
 }

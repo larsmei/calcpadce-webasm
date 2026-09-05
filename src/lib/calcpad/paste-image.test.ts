@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   continueLongLine,
+  detachInlineImages,
   findWorksheetImageRanges,
   imageKindLabel,
   imageSnippetAtCursor,
   joinContinuedLines,
+  reattachInlineImages,
   worksheetImageComment,
 } from "./paste-image.ts";
 
@@ -71,3 +73,25 @@ test("findWorksheetImageRanges finds two pasted images", () => {
   assert.equal(ranges[0].alt, "one");
   assert.equal(ranges[1].alt, "two");
 });
+
+test("detachInlineImages replaces data URIs with cid placeholders and keeps line count", () => {
+  const img = worksheetImageComment(TINY_PNG, "shot");
+  const doc = `r = 1 cm\n${img}\nh = 2 cm\n`;
+  const before = doc.split("\n").length;
+  const { source, images } = detachInlineImages(doc);
+  assert.equal(images.length, 1);
+  assert.equal(images[0], TINY_PNG);
+  assert.match(source, /src="cid:cpd-img-0"/);
+  assert.doesNotMatch(source, /data:image\/png;base64,/);
+  assert.equal(source.split("\n").length, before);
+  const html = `'<img class="worksheet-image" src="cid:cpd-img-0" alt="shot">`;
+  assert.match(reattachInlineImages(html, images), /src="data:image\/png;base64,/);
+});
+
+test("detachInlineImages is a no-op without data URIs", () => {
+  const doc = "r = 1 cm\n";
+  const { source, images } = detachInlineImages(doc);
+  assert.equal(source, doc);
+  assert.equal(images.length, 0);
+});
+

@@ -4,7 +4,7 @@
 
 No server is required. Host the static zip on Apache, nginx, or any file server.
 
-Latest release: [v0.3.9](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.9)
+Latest release: [v0.3.10](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.10)
 
 Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE) (MIT).
 
@@ -18,6 +18,7 @@ Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE)
 - Calcpad syntax highlighting (including unclosed quotes)
 - Paste screenshots into the source at the cursor
 - Example catalog and HTML report export
+- Fast engine path: plots, integrals and `$Repeat` skip `Expression.Compile` in the browser; the download is ~8 MB (Excel/Word assemblies are not shipped)
 
 ### Form / Results (F4 / F5)
 
@@ -80,7 +81,7 @@ Acrobat shows the worksheet under the paperclip / Attachments panel.
 
 The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page.
 
-Download **`calcpadce-static-v0.3.9.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+Download **`calcpadce-static-v0.3.10.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
 
 ```
 index.html
@@ -118,11 +119,11 @@ npm run build:static
 Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 ```bash
-dotnet publish wasm/Calcpad.Wasm.csproj -c Release
+dotnet publish wasm/Calcpad.Wasm.csproj -c Release -p:CalcpadNoOpenXml=true
 # copy wasm/publish/wwwroot/calcpad-wasm → public/calcpad-wasm
 ```
 
-The JS side boots `blazor.webassembly.js` and calls `Calcpad.Wasm.Parse` via `DotNet.invokeMethod`.
+The JS side boots `blazor.webassembly.js` and calls `Calcpad.Wasm.ParseRaw` (JSExport: metadata JSON + raw HTML). `Parse` remains as a JSON-envelope fallback.
 
 ## Layout
 

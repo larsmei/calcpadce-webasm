@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+#if !CALCPAD_NO_OPENXML
 using Calcpad.OpenXml;
+#endif
 
 namespace Calcpad.Core
 {
@@ -27,10 +29,14 @@ namespace Calcpad.Core
                 {
                     if (options.IsExcel)
                     {
+#if CALCPAD_NO_OPENXML
+                        throw Exceptions.FileFormatNotSupported(options.Ext.ToString());
+#else
                         if (!ExcelData.IsExcelFile(options.Ext.ToString()))
                             throw Exceptions.FileFormatNotSupported(options.Ext.ToString());
 
                         return ReadExcel(options);
+#endif
                     }
                     return ReadCSV(options);
                 }
@@ -53,8 +59,14 @@ namespace Calcpad.Core
                 try
                 {
                     if (options.IsExcel)
+                    {
+#if CALCPAD_NO_OPENXML
+                        throw Exceptions.FileFormatNotSupported(options.Ext.ToString());
+#else
                         return ExcelData.ReadFromMemory(bytes[..length], options.Sheet.ToString(),
                             options.Start.ToString(), options.End.ToString());
+#endif
+                    }
 
                     return ReadCSVFromString(options, Encoding.UTF8.GetString(bytes, 0, length));
                 }
@@ -178,10 +190,14 @@ namespace Calcpad.Core
 
             private static string[][] ReadExcel(ReadWriteOptions options)
             {
+#if CALCPAD_NO_OPENXML
+                throw Exceptions.FileFormatNotSupported(options.Ext.ToString());
+#else
                 var sheet = options.Sheet.ToString();
                 var start = options.Start.ToString();
                 var end = options.End.ToString();
                 return ExcelData.Read(options.FullPath, sheet, start, end);
+#endif
             }
 
             /// <summary>
@@ -247,10 +263,14 @@ namespace Calcpad.Core
 
             private static void WriteExcel(ReadWriteOptions options, string[][] matrix)
             {
+#if CALCPAD_NO_OPENXML
+                throw Exceptions.FileFormatNotSupported(options.Ext.ToString());
+#else
                 var sheet = options.Sheet.ToString();
                 var start = options.Start.ToString();
                 var end = options.End.ToString();
                 ExcelData.Write(options.FullPath, sheet, start, end, matrix, options.Append);
+#endif
             }
         }
     }

@@ -1,6 +1,4 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-
-namespace Calcpad.Core
+﻿namespace Calcpad.Core
 {
     internal class ColumnMatrix : Matrix
     {

@@ -3,6 +3,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <BlazorWebAssemblyLoadAllGlobalizationData>false</BlazorWebAssemblyLoadAllGlobalizationData>
     <InvariantGlobalization>true</InvariantGlobalization>
     <BlazorEnableTimeZoneSupport>false</BlazorEnableTimeZoneSupport>
@@ -12,16 +13,26 @@
     <CompressionEnabled>false</CompressionEnabled>
     <StaticWebAssetBasePath>calcpad-wasm</StaticWebAssetBasePath>
     <OverrideHtmlAssetPlaceholders>false</OverrideHtmlAssetPlaceholders>
+    <DebuggerSupport>false</DebuggerSupport>
+    <EventSourceSupport>false</EventSourceSupport>
+    <MetricsSupport>false</MetricsSupport>
+    <StackTraceSupport>false</StackTraceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+    <EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
+    <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+    <WasmEnableSIMD>true</WasmEnableSIMD>
+    <BlazorWebAssemblyJiterpreter>true</BlazorWebAssemblyJiterpreter>
+    <CalcpadNoOpenXml>true</CalcpadNoOpenXml>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
     <TrimmerRootAssembly Include="Calcpad.Core" />
-    <TrimmerRootAssembly Include="Calcpad.OpenXml" />
     <TrimmerRootAssembly Include="Calcpad.Wasm" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\vendor\CalcpadCE\Calcpad.Core\Calcpad.Core.csproj" />
+    <ProjectReference Include="..\vendor\CalcpadCE\Calcpad.Core\Calcpad.Core.csproj" AdditionalProperties="CalcpadNoOpenXml=true" />
   </ItemGroup>
 </Project>

@@ -33,11 +33,58 @@ namespace Calcpad.Core
                 if (rpn.Length < 1)
                     throw Exceptions.ExpressionEmpty();
 
+                // WASM: Expression.Compile() emits IL at runtime. Under the interpreter that
+                // is extremely slow (plots, $Integral, $Sum, custom functions). Walk the RPN
+                // with Evaluator instead; desktop keeps the compiled delegates.
+                if (OperatingSystem.IsBrowser())
+                    return BindEvaluator(rpn, allowAssignment);
+
                 _allowAssignment = allowAssignment;
                 var expression = Expression.Convert(Parse(rpn), typeof(IValue));
                 var lambda = Expression.Lambda<Func<IValue>>(expression);
                 return lambda.Compile();
             }
+
+            internal static Func<IValue> CompileLambda(Expression body)
+            {
+                var lambda = Expression.Lambda<Func<IValue>>(body);
+                return OperatingSystem.IsBrowser()
+                    ? lambda.Compile(preferInterpretation: true)
+                    : lambda.Compile();
+            }
+
+            private Func<IValue> BindEvaluator(Token[] rpn, bool allowAssignment)
+            {
+                if (allowAssignment &&
+                    IsAssignment(rpn[^1].Content) &&
+                    rpn[0].Type == TokenTypes.Variable &&
+                    rpn[0] is VariableToken vt &&
+                    !vt.Variable.IsInitialized)
+                {
+                    vt.Variable.Assign(RealValue.Zero);
+                }
+
+                var parser = _parser;
+                var evaluator = parser._evaluator;
+                return () =>
+                {
+                    var savedUnits = parser.Units;
+                    var savedBackup = parser._backupVariable;
+                    var savedTarget = parser._targetUnits;
+                    parser._targetUnits = null;
+                    try
+                    {
+                        return evaluator.Evaluate(rpn, false);
+                    }
+                    finally
+                    {
+                        parser.Units = savedUnits;
+                        parser._backupVariable = savedBackup;
+                        parser._targetUnits = savedTarget;
+                    }
+                };
+            }
+
 
             internal Expression RpnToExpressionTree(Token[] rpn, bool allowAssignment)
             {
@@ -661,8 +708,7 @@ namespace Calcpad.Core
                      Expression.Assign(resultVariable, Expression.Constant(RealValue.Zero, typeof(IValue))),
                      Expression.Loop(loopBody, breakLabel)
                 );
-                var lambda = Expression.Lambda<Func<IValue>>(whileLoop);
-                return lambda.Compile();
+                return CompileLambda(whileLoop);
             }
 
         }

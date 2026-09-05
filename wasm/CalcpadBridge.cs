@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.InteropServices.JavaScript;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Calcpad.Core;
@@ -6,7 +7,7 @@ using Microsoft.JSInterop;
 
 namespace Calcpad.Wasm;
 
-public static class CalcpadBridge
+public static partial class CalcpadBridge
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -15,7 +16,27 @@ public static class CalcpadBridge
     };
 
     [JSInvokable]
+    [JSExport]
+    public static string Ping() => "ok";
+
+    /// <summary>JSInvokable fallback: JSON envelope (HTML is escaped).</summary>
+    [JSInvokable]
     public static string Parse(string sourceCode, string optionsJson)
+    {
+        var result = Run(sourceCode, optionsJson);
+        return JsonSerializer.Serialize(result, JsonOptions);
+    }
+
+    /// <summary>JSExport path: one JSON metadata line, then raw HTML (no extra escaping).</summary>
+    [JSExport]
+    public static string ParseRaw(string sourceCode, string optionsJson)
+    {
+        var result = Run(sourceCode, optionsJson);
+        var meta = JsonSerializer.Serialize(new ParseMeta { Errors = result.Errors, Ok = result.Ok }, JsonOptions);
+        return meta + "\n" + result.Html;
+    }
+
+    private static ParseResult Run(string? sourceCode, string? optionsJson)
     {
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
@@ -36,6 +57,7 @@ public static class CalcpadBridge
         settings.Math.FormatEquations = true;
         settings.Plot.VectorGraphics = true;
         settings.Plot.IsAdaptive = true;
+        settings.Plot.ScreenScaleFactor = 1;
         settings.Plot.Width = options.PlotWidth;
         settings.Plot.Height = options.PlotHeight;
 
@@ -44,23 +66,32 @@ public static class CalcpadBridge
 
         try
         {
-            var macroParser = new MacroParser
+            PathRoots pathRoots;
+            if (NeedsMacros(unwrapped))
             {
-                Include = (path, _) => $"' [include skipped in browser: {path}]\n",
-                SourceFilePath = options.FileName ?? "worksheet.cpd"
-            };
-            var hasMacroErrors = macroParser.Parse(sourceCode ?? string.Empty, out unwrapped, null, 0, true);
-            if (hasMacroErrors && macroParser.Errors is not null)
+                var macroParser = new MacroParser
+                {
+                    Include = (path, _) => $"' [include skipped in browser: {path}]\n",
+                    SourceFilePath = options.FileName ?? "worksheet.cpd"
+                };
+                var hasMacroErrors = macroParser.Parse(sourceCode ?? string.Empty, out unwrapped, null, 0, true);
+                if (hasMacroErrors && macroParser.Errors is not null)
+                {
+                    foreach (var err in macroParser.Errors)
+                        errors.Add(ToError(err));
+                }
+                pathRoots = macroParser.PathRoots;
+            }
+            else
             {
-                foreach (var err in macroParser.Errors)
-                    errors.Add(ToError(err));
+                pathRoots = new PathRoots();
             }
 
             var parser = new ExpressionParser
             {
                 Settings = settings,
                 SourceFilePath = options.FileName ?? "worksheet.cpd",
-                PathRoots = macroParser.PathRoots,
+                PathRoots = pathRoots,
                 Debug = options.Debug,
                 ShowWarnings = true,
                 EnableUi = options.EnableUi,
@@ -74,23 +105,33 @@ public static class CalcpadBridge
                     errors.Add(ToError(err));
             }
 
-            return JsonSerializer.Serialize(new ParseResult
+            return new ParseResult
             {
                 Html = parser.HtmlResult ?? string.Empty,
                 Errors = errors,
                 Ok = errors.Count == 0
-            }, JsonOptions);
+            };
         }
         catch (Exception ex)
         {
             errors.Add(new ErrorDto { Line = 0, Message = ex.Message, Source = "Expression" });
-            return JsonSerializer.Serialize(new ParseResult
+            return new ParseResult
             {
                 Html = $"<p class=\"err\">{System.Web.HttpUtility.HtmlEncode(ex.Message)}</p>",
                 Errors = errors,
                 Ok = false
-            }, JsonOptions);
+            };
         }
+    }
+
+    internal static bool NeedsMacros(string source)
+    {
+        if (source.IndexOf('#') < 0) return false;
+        return source.Contains("#def", StringComparison.OrdinalIgnoreCase)
+            || source.Contains("#include", StringComparison.OrdinalIgnoreCase)
+            || source.Contains("#end def", StringComparison.OrdinalIgnoreCase)
+            || source.Contains("#projectpath", StringComparison.OrdinalIgnoreCase)
+            || source.Contains("#librarypath", StringComparison.OrdinalIgnoreCase);
     }
 
     private static ErrorDto ToError(CalcpadError err) => new()
@@ -117,6 +158,12 @@ public static class CalcpadBridge
         public string FileName { get; set; } = "worksheet.cpd";
         public int PlotWidth { get; set; } = 520;
         public int PlotHeight { get; set; } = 320;
+    }
+
+    private sealed class ParseMeta
+    {
+        public List<ErrorDto> Errors { get; set; } = [];
+        public bool Ok { get; set; }
     }
 
     private sealed class ParseResult

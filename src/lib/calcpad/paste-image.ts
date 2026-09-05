@@ -140,6 +140,38 @@ export function findWorksheetImageRanges(source: string): WorksheetImageRange[] 
   return ranges;
 }
 
+const IMG_PLACEHOLDER_SRC = /src\s*=\s*(["'])cid:cpd-img-(\d+)\1/gi;
+
+/** Swap bulky data-URI screenshots for short cid: placeholders before WASM parse. */
+export function detachInlineImages(source: string): { source: string; images: string[] } {
+  if (!source.includes("data:image/")) return { source, images: [] };
+  const ranges = findWorksheetImageRanges(source);
+  if (!ranges.length) return { source, images: [] };
+  const images: string[] = [];
+  let out = "";
+  let last = 0;
+  for (const range of ranges) {
+    out += source.slice(last, range.from);
+    const i = images.length;
+    images.push(range.dataUri);
+    const alt = range.alt.replace(/["<>\n]/g, " ").trim() || "screenshot";
+    const line = `'<img class="worksheet-image" src="cid:cpd-img-${i}" alt="${alt}">\n`;
+    const extra = Math.max(0, range.lineCount - 1);
+    out += extra ? line + "'\n".repeat(extra) : line;
+    last = range.to;
+  }
+  out += source.slice(last);
+  return { source: out, images };
+}
+
+export function reattachInlineImages(html: string, images: string[]): string {
+  if (!images.length || !html.includes("cid:cpd-img-")) return html;
+  return html.replace(IMG_PLACEHOLDER_SRC, (match, quote: string, n: string) => {
+    const uri = images[Number(n)];
+    return uri ? `src=${quote}${uri}${quote}` : match;
+  });
+}
+
 function blobToDataUri(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

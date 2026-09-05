@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Office2016.Drawing.Command;
-using System;
+﻿using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq.Expressions;
@@ -372,8 +371,7 @@ namespace Calcpad.Core
                         else
                         {
                             var body = Expression.Block(expressions);
-                            var lambda = Expression.Lambda<Func<IValue>>(body);
-                            _f = lambda.Compile();
+                            _f = Compiler.CompileLambda(body);
                         }
 
                     }

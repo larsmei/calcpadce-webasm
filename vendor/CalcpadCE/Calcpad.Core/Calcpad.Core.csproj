@@ -9,15 +9,16 @@
     <Company>CalcpadCE Community</Company>
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <DefineConstants Condition="'$(CalcpadNoOpenXml)' == 'true'">$(DefineConstants);CALCPAD_NO_OPENXML</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Markdig.Signed" Version="0.43.0" />
     <PackageReference Include="SkiaSharp" Version="3.119.1" />
-    <PackageReference Include="System.IO.Packaging" Version="10.0.0" />
+    <PackageReference Include="System.IO.Packaging" Version="10.0.0" Condition="'$(CalcpadNoOpenXml)' != 'true'" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(CalcpadNoOpenXml)' != 'true'">
     <ProjectReference Include="..\Calcpad.OpenXml\Calcpad.OpenXml.csproj" />
   </ItemGroup>
 

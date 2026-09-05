@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Drawing.Diagrams;
-using System;
+﻿using System;
 
 namespace Calcpad.Core
 {
