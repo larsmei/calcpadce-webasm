@@ -16,6 +16,32 @@ Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE)
 
 Not ported (need a filesystem or extra native tooling): `#include` of arbitrary files, CSV/Excel I/O, Word/PDF export.
 
+## Host on Apache / nginx / any static server
+
+The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page — there is no UI.
+
+Download **`calcpadce-static-*.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+
+```
+index.html
+assets/
+calcpad-wasm/_framework/   ← engine, keep this nested path
+examples/
+.htaccess
+```
+
+Apache already serving `.wasm` as `application/wasm` is enough. The included `.htaccess` sets MIME types and a SPA fallback.
+
+Build the static site yourself:
+
+```bash
+npm install
+npm run build:static
+# output: dist-web/
+```
+
+The site must be at the domain root (e.g. `https://rechner.example.de/`), not in a subfolder, unless you set Vite `base`.
+
 ## Layout
 
 ```

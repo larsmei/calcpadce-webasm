@@ -23,6 +23,7 @@ import { bootEngine, parseWorksheet } from "@/lib/calcpad/engine";
 import { applyInputValues } from "@/lib/calcpad/inputs";
 import { useCalcpadStore } from "@/lib/calcpad/store";
 import { cn } from "@/lib/utils";
+import { assetUrl } from "@/lib/calcpad/asset-url";
 
 function downloadText(filename: string, contents: string, mime: string) {
   const blob = new Blob([contents], { type: mime });
@@ -37,7 +38,7 @@ function downloadText(filename: string, contents: string, mime: string) {
 async function exportHtmlReport(fileName: string, html: string) {
   let css = "";
   try {
-    css = await fetch("/calcpad-output.css").then((r) => r.text());
+    css = await fetch(assetUrl("calcpad-output.css")).then((r) => r.text());
   } catch {
     css = "";
   }

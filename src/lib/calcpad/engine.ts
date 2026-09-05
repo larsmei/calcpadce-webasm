@@ -1,4 +1,5 @@
 import type { EngineOptions, ParseResult } from "./types";
+import { assetUrl } from "./asset-url";
 
 declare global {
   interface Window {
@@ -16,9 +17,11 @@ declare global {
   }
 }
 
-const SCRIPT_SRC = "/calcpad-wasm/_framework/blazor.webassembly.js";
 const ASSEMBLY = "Calcpad.Wasm";
-const FRAMEWORK = "/calcpad-wasm/_framework/";
+
+function frameworkUrl(name = ""): string {
+  return assetUrl(`calcpad-wasm/_framework/${name}`);
+}
 
 let bootPromise: Promise<void> | null = null;
 let assembliesReady = false;
@@ -60,12 +63,12 @@ function loadBootResource(
     return defaultUri;
   }
   if (defaultUri.startsWith("_framework/")) {
-    return `/calcpad-wasm/${defaultUri}`;
+    return frameworkUrl(defaultUri.slice("_framework/".length));
   }
   if (defaultUri.startsWith("/")) {
     return defaultUri;
   }
-  return `${FRAMEWORK}${name}`;
+  return frameworkUrl(name);
 }
 
 function assemblyAvailable(): boolean {
@@ -88,7 +91,7 @@ export async function bootEngine(): Promise<void> {
   if (bootPromise) return bootPromise;
 
   bootPromise = (async () => {
-    await loadClassicScript(SCRIPT_SRC);
+    await loadClassicScript(frameworkUrl("blazor.webassembly.js"));
     if (!window.Blazor) {
       throw new Error("Blazor runtime did not initialize.");
     }

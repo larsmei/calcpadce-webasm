@@ -4,6 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { ExampleMeta } from "@/lib/calcpad/types";
 import { cn } from "@/lib/utils";
+import { assetUrl } from "@/lib/calcpad/asset-url";
 
 type Props = {
   open: boolean;
@@ -20,7 +21,7 @@ export function ExamplesPanel({ open, onOpenChange, onPick }: Props) {
     if (!open || items.length) return;
     let cancelled = false;
     setLoading(true);
-    fetch("/examples/catalog.json")
+    fetch(assetUrl("examples/catalog.json"))
       .then((r) => r.json())
       .then((data: ExampleMeta[]) => {
         if (!cancelled) setItems(data);
@@ -37,7 +38,7 @@ export function ExamplesPanel({ open, onOpenChange, onPick }: Props) {
   }, [open, items.length]);
 
   async function pick(item: ExampleMeta) {
-    const res = await fetch(`/examples/${item.file}`);
+    const res = await fetch(assetUrl(`examples/${item.file}`));
     const text = await res.text();
     onPick(item.title, text, item.file);
     onOpenChange(false);
