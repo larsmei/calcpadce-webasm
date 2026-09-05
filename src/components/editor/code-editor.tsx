@@ -7,6 +7,11 @@ import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { autocompletion, closeBrackets, completionKeymap, type CompletionContext } from "@codemirror/autocomplete";
 import { tags } from "@lezer/highlight";
 import { calcpadLanguage, CALCPAD_COMPLETIONS } from "@/lib/calcpad/language";
+import {
+  filesToWorksheetImages,
+  imageSnippetAtCursor,
+  imagesToInsert,
+} from "@/lib/calcpad/paste-image";
 
 const highlight = HighlightStyle.define([
   { tag: tags.comment, color: "#008000" },
@@ -74,6 +79,24 @@ const theme = EditorView.theme(
   { dark: false },
 );
 
+function insertSnippet(view: EditorView, snippet: string, from: number, to: number) {
+  if (!snippet) return;
+  const { insert } = imageSnippetAtCursor(view.state.doc.toString(), from, to, snippet);
+  view.dispatch({
+    changes: { from, to, insert },
+    selection: { anchor: from + insert.length },
+    scrollIntoView: true,
+  });
+  view.focus();
+}
+
+async function insertClipboardImages(view: EditorView, files: File[], from: number, to: number) {
+  const snippet = await filesToWorksheetImages(files);
+  if (!snippet || !view.dom.isConnected) return;
+  const max = view.state.doc.length;
+  insertSnippet(view, snippet, Math.min(from, max), Math.min(to, max));
+}
+
 type Props = {
   value: string;
   onChange: (value: string) => void;
@@ -123,6 +146,32 @@ export function CodeEditor({ value, onChange, onRun, focusLine }: Props) {
             },
           ]),
           theme,
+          EditorView.domEventHandlers({
+            paste(event, v) {
+              const images = imagesToInsert(event.clipboardData, "paste");
+              if (!images.length) return false;
+              event.preventDefault();
+              const { from, to } = v.state.selection.main;
+              void insertClipboardImages(v, images, from, to);
+              return true;
+            },
+            drop(event, v) {
+              const images = imagesToInsert(event.dataTransfer, "drop");
+              if (!images.length) return false;
+              event.preventDefault();
+              const pos =
+                v.posAtCoords({ x: event.clientX, y: event.clientY }) ??
+                v.state.selection.main.head;
+              void insertClipboardImages(v, images, pos, pos);
+              return true;
+            },
+            dragover(event) {
+              if (![...(event.dataTransfer?.types ?? [])].includes("Files")) return false;
+              event.preventDefault();
+              if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+              return true;
+            },
+          }),
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
               onChangeRef.current(update.state.doc.toString());

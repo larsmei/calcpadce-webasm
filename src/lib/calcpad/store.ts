@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import {
   DEFAULT_OPTIONS,
   DEFAULT_WORKSHEET,
@@ -7,6 +7,7 @@ import {
   type ParseError,
   type ViewMode,
 } from "./types";
+import { persistStorage } from "./persist-storage";
 
 export type EngineStatus = "idle" | "booting" | "ready" | "running" | "error";
 
@@ -69,6 +70,7 @@ export const useCalcpadStore = create<CalcpadState>()(
     }),
     {
       name: "calcpadce-wasm",
+      storage: createJSONStorage(() => persistStorage),
       partialize: (s) => ({
         source: s.source,
         options: s.options,

@@ -6,6 +6,7 @@ import {
   extractCpdAttachment,
 } from "./pdf-attachment.ts";
 import { readUiOverrides, withUiOverridesComment, worksheetAttachName } from "./worksheet-meta.ts";
+import { worksheetImageComment, joinContinuedLines } from "./paste-image.ts";
 
 test("worksheetAttachName keeps a .cpd suffix", () => {
   assert.equal(worksheetAttachName("beam.cpd"), "beam.cpd");
@@ -42,4 +43,18 @@ test("PDF without a .cpd attachment returns null", async () => {
   });
   const bytes = await doc.save();
   assert.equal(await extractCpdAttachment(bytes), null);
+});
+
+test("PDF attachment keeps pasted screenshot data URIs", async () => {
+  const png =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=";
+  const source = `r = 1\n${worksheetImageComment(png)}\nA = r^2\n`;
+  const doc = await PDFDocument.create();
+  doc.addPage();
+  const withAtt = await embedWorksheetAttachment(await doc.save(), source, "shot.cpd");
+  const found = await extractCpdAttachment(withAtt);
+  assert.ok(found);
+  const joined = joinContinuedLines(found.source);
+  assert.match(joined, /src="data:image\/png;base64,/);
+  assert.match(joined, /class="worksheet-image"/);
 });

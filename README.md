@@ -4,7 +4,7 @@
 
 No server is required. Host the static zip on Apache, nginx, or any file server.
 
-Latest release: [v0.3.7](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.7)
+Latest release: [v0.3.8](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.8)
 
 Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE) (MIT).
 
@@ -16,6 +16,7 @@ Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE)
 - Plotly / embedded scripts in worksheet HTML
 - `#if` / `#for` / `#while` / `#def`
 - Calcpad syntax highlighting (including unclosed quotes)
+- Paste screenshots into the source at the cursor
 - Example catalog and HTML report export
 
 ### Form / Results (F4 / F5)
@@ -37,6 +38,8 @@ r = ? {5} cm
 h = ? {12} cm
 #post
 V = π * r^2 * h
+V|dm^3
+V|gal
 #end post
 ```
 
@@ -52,13 +55,23 @@ M_max = q*L^2/k_M
 #end post
 ```
 
+### Screenshots
+
+Paste (**Ctrl/⌘ V**) or drop a PNG/JPEG into the **source editor**. The image is inserted **at the cursor** as a Calcpad HTML comment with an inline data URI:
+
+```
+'<img src="data:image/png;base64,…" alt="screenshot">
+```
+
+Long data URIs are wrapped with Calcpad ` _` line continuation so the editor stays usable. The report renders the picture; PDF export paints it on the page **and** keeps it inside the attached `.cpd`, so Open → PDF restores the images.
+
 ### PDF
 
 - A4 (210 × 297 mm)
 - Margins: left 3 cm, right 2 cm, top/bottom 3 cm
 - Page breaks between whole lines, equations and plots — plots are not split
 - Export always writes the **calculated report** (Results), not the Form
-- The active `.cpd` is stored as a **PDF file attachment** (including `#UI` values)
+- The active `.cpd` is stored as a **PDF file attachment** (including `#UI` values and pasted images)
 - **Open** accepts `.cpd`, `.txt`, `.cpdz` and **`.pdf`**. A PDF is scanned for a `.cpd` attachment and loaded when one is present. A PDF without that attachment is left alone; a hint appears in the status bar.
 
 Acrobat shows the worksheet under the paperclip / Attachments panel.
@@ -67,7 +80,7 @@ Acrobat shows the worksheet under the paperclip / Attachments panel.
 
 The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page.
 
-Download **`calcpadce-static-v0.3.7.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+Download **`calcpadce-static-v0.3.8.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
 
 ```
 index.html
