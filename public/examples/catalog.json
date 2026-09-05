@@ -60,6 +60,12 @@
     "preview": "'<!-- A reference for styling the native 2D plots in CalcpadCE: configure a chart title, axis labels, legend entries and series colours through the `PlotTitle`, `PlotLabelX`, `Plot"
   },
   {
+    "title": "3D Plot with Plotly",
+    "file": "3d-plotly.cpd",
+    "bytes": 1100,
+    "preview": "#hide\n#rad\nn = 100\nA = matrix(n; n)\n$Repeat{$Repeat{A.(i; j) = cos(π*(2*i/n - 1))^2 …\n'<script src=\"https://cdn.plot.ly/plotly-2.26.0.min.js\">"
+  },
+  {
     "title": "Parametric SVG",
     "file": "parametric-svg-generation.cpd",
     "bytes": 2560,

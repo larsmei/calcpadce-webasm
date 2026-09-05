@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { collectPaperInputs } from "@/lib/calcpad/inputs";
+import { runEmbeddedScripts } from "@/lib/calcpad/run-scripts";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -94,7 +95,11 @@ export function Paper({
     root.querySelectorAll(".dvcs:has(.block) > :first-child").forEach((el) => {
       (el as HTMLElement).innerHTML = "&hairsp;";
     });
+    const scripts = runEmbeddedScripts(root, html).catch((err) => {
+      console.warn("[calcpad] embedded script failed", err);
+    });
     return () => {
+      void scripts;
       root.removeEventListener("click", onClick);
       root.removeEventListener("change", onChange);
     };

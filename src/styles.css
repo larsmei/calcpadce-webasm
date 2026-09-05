@@ -66,6 +66,11 @@
   max-width: 100%;
 }
 
+.calcpad-paper .js-plotly-plot,
+.calcpad-paper .plotly-graph-div {
+  max-width: 100%;
+}
+
 .calcpad-paper u[class*="input-"] {
   cursor: text;
   border-bottom: 1px dashed color-mix(in oklab, #1c1a16 35%, transparent);
