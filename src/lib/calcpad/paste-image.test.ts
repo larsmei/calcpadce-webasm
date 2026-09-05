@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   continueLongLine,
+  findWorksheetImageRanges,
+  imageKindLabel,
   imageSnippetAtCursor,
   joinContinuedLines,
   worksheetImageComment,
@@ -39,4 +41,33 @@ test("image snippet on an empty line does not add a leading newline", () => {
   const { insert } = imageSnippetAtCursor(doc, from, from, "'<img src=\"x\">");
   assert.equal(insert.startsWith("\n"), false);
   assert.equal(insert.endsWith("\n"), true);
+});
+
+test("findWorksheetImageRanges covers a wrapped screenshot as one block", () => {
+  const img = worksheetImageComment(TINY_PNG, "shot");
+  const doc = `r = 1 cm\n${img}\nh = 2 cm\n`;
+  const ranges = findWorksheetImageRanges(doc);
+  assert.equal(ranges.length, 1);
+  assert.equal(ranges[0].alt, "shot");
+  assert.equal(ranges[0].mime, "image/png");
+  assert.equal(imageKindLabel(ranges[0].mime), "PNG");
+  assert.ok(ranges[0].lineCount >= 1);
+  assert.equal(doc.slice(ranges[0].from, ranges[0].from + 5), "'<img");
+  assert.equal(doc.slice(ranges[0].to, ranges[0].to + 6), "h = 2 ");
+  assert.match(joinContinuedLines(doc.slice(ranges[0].from, ranges[0].to)), /src="data:image\/png/);
+});
+
+test("findWorksheetImageRanges skips remote img comments", () => {
+  const doc = `'<img src="https://example.com/a.png" alt="remote">\nr = 1\n`;
+  assert.equal(findWorksheetImageRanges(doc).length, 0);
+});
+
+test("findWorksheetImageRanges finds two pasted images", () => {
+  const a = worksheetImageComment(TINY_PNG, "one");
+  const b = worksheetImageComment(TINY_PNG, "two");
+  const doc = `${a}\n${b}\n`;
+  const ranges = findWorksheetImageRanges(doc);
+  assert.equal(ranges.length, 2);
+  assert.equal(ranges[0].alt, "one");
+  assert.equal(ranges[1].alt, "two");
 });

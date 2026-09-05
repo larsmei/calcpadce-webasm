@@ -7,6 +7,7 @@ import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { autocompletion, closeBrackets, completionKeymap, type CompletionContext } from "@codemirror/autocomplete";
 import { tags } from "@lezer/highlight";
 import { calcpadLanguage, CALCPAD_COMPLETIONS } from "@/lib/calcpad/language";
+import { imageFold } from "@/lib/calcpad/image-fold";
 import {
   filesToWorksheetImages,
   imageSnippetAtCursor,
@@ -146,6 +147,7 @@ export function CodeEditor({ value, onChange, onRun, focusLine }: Props) {
             },
           ]),
           theme,
+          imageFold,
           EditorView.domEventHandlers({
             paste(event, v) {
               const images = imagesToInsert(event.clipboardData, "paste");

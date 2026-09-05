@@ -5,6 +5,10 @@ export const MAX_IMAGE_SIDE = 1600;
 const PNG_SIZE_LIMIT = 1_200_000;
 
 const IMAGE_TYPE = /^image\/(png|jpe?g|gif|webp|bmp|svg\+xml)$/i;
+const IMG_LINE = /^['"]<img\b/i;
+const DATA_SRC = /src\s*=\s*["'](data:image\/[^"']+)["']/i;
+const ALT_ATTR = /alt\s*=\s*["']([^"']*)["']/i;
+const DATA_MIME = /^data:(image\/[a-z0-9.+-]+)/i;
 
 export function continueLongLine(text: string, width = IMAGE_LINE_WIDTH): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
@@ -80,6 +84,60 @@ export function imagesToInsert(dt: DataTransfer | null | undefined, mode: "paste
   if (mode === "drop") return images;
   const text = (dt?.getData("text/plain") ?? "").trim();
   return text ? [] : images;
+}
+
+export type WorksheetImageRange = {
+  from: number;
+  to: number;
+  dataUri: string;
+  alt: string;
+  mime: string;
+  lineCount: number;
+};
+
+export function imageKindLabel(mime: string) {
+  if (/jpeg/i.test(mime)) return "JPEG";
+  if (/png/i.test(mime)) return "PNG";
+  if (/webp/i.test(mime)) return "WebP";
+  if (/gif/i.test(mime)) return "GIF";
+  if (/svg/i.test(mime)) return "SVG";
+  return "Image";
+}
+
+/** Locate pasted `'<img src="data:image…">` comments, including ` _` continuations. */
+export function findWorksheetImageRanges(source: string): WorksheetImageRange[] {
+  const ranges: WorksheetImageRange[] = [];
+  const n = source.length;
+  let i = 0;
+  while (i < n) {
+    const lineFrom = i;
+    while (i < n && source[i] !== "\n") i++;
+    const line = source.slice(lineFrom, i);
+    const body = line.replace(/^[ \t]*/, "");
+    if (IMG_LINE.test(body)) {
+      let joined = line.trimEnd();
+      let lineCount = 1;
+      let end = i;
+      while (joined.endsWith(" _") && i < n) {
+        if (source[i] === "\n") i += 1;
+        const nextFrom = i;
+        while (i < n && source[i] !== "\n") i++;
+        joined = joined.slice(0, -2) + source.slice(nextFrom, i).trim();
+        end = i;
+        lineCount += 1;
+      }
+      const srcMatch = DATA_SRC.exec(joined);
+      if (srcMatch) {
+        let to = end;
+        if (to < n && source[to] === "\n") to += 1;
+        const alt = ALT_ATTR.exec(joined)?.[1]?.trim() || "screenshot";
+        const mime = DATA_MIME.exec(srcMatch[1])?.[1] ?? "image";
+        ranges.push({ from: lineFrom, to, dataUri: srcMatch[1], alt, mime, lineCount });
+      }
+    }
+    if (i < n && source[i] === "\n") i += 1;
+  }
+  return ranges;
 }
 
 function blobToDataUri(blob: Blob): Promise<string> {

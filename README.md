@@ -4,7 +4,7 @@
 
 No server is required. Host the static zip on Apache, nginx, or any file server.
 
-Latest release: [v0.3.8](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.8)
+Latest release: [v0.3.9](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.9)
 
 Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE) (MIT).
 
@@ -57,13 +57,13 @@ M_max = q*L^2/k_M
 
 ### Screenshots
 
-Paste (**Ctrl/⌘ V**) or drop a PNG/JPEG into the **source editor**. The image is inserted **at the cursor** as a Calcpad HTML comment with an inline data URI:
+Paste (**Ctrl/⌘ V**) or drop a PNG/JPEG into the **source editor**. The image is inserted **at the cursor** as a Calcpad HTML comment with an inline data URI. In the editor the data URI is **folded** into a compact preview (click to show or hide the source):
 
 ```
 '<img src="data:image/png;base64,…" alt="screenshot">
 ```
 
-Long data URIs are wrapped with Calcpad ` _` line continuation so the editor stays usable. The report renders the picture; PDF export paints it on the page **and** keeps it inside the attached `.cpd`, so Open → PDF restores the images.
+Long data URIs are wrapped with Calcpad ` _` line continuation. The report renders the picture; PDF export paints it on the page **and** keeps it inside the attached `.cpd`, so Open → PDF restores the images.
 
 ### PDF
 
@@ -80,7 +80,7 @@ Acrobat shows the worksheet under the paperclip / Attachments panel.
 
 The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page.
 
-Download **`calcpadce-static-v0.3.8.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+Download **`calcpadce-static-v0.3.9.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
 
 ```
 index.html
