@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "./**/*.{ts,tsx}";
 @import "./styles-calcpad-paper.css";
 
 @theme {
