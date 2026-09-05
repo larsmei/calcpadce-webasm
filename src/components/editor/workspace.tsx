@@ -33,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { assetUrl } from "@/lib/calcpad/asset-url";
 import { exportPdfReport } from "@/lib/calcpad/export-pdf";
+import { readUiOverrides } from "@/lib/calcpad/worksheet-meta";
 
 function downloadText(filename: string, contents: string, mime: string) {
   const blob = new Blob([contents], { type: mime });
@@ -94,6 +95,7 @@ export function Workspace() {
   const [mounted, setMounted] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [importHint, setImportHint] = useState<string | null>(null);
   const [focusLine, setFocusLine] = useState<{ line: number; key: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<number | null>(null);
@@ -135,15 +137,38 @@ export function Workspace() {
   }, [run, setViewMode]);
 
   const loadWorksheet = useCallback(
-    (text: string, name: string) => {
+    (text: string, name: string, overrides?: Record<string, string>) => {
       sourceRef.current = text;
       setSource(text);
       setFileName(name);
-      setUiOverrides({});
+      setUiOverrides(overrides ?? readUiOverrides(text));
       if (hasUiDirective(text)) setViewMode("form");
     },
     [setSource, setFileName, setUiOverrides, setViewMode],
   );
+
+  async function openPickedFile(file: File) {
+    const isPdf = /\.pdf$/i.test(file.name) || file.type === "application/pdf";
+    if (isPdf) {
+      try {
+        const found = await (await import("@/lib/calcpad/pdf-attachment")).extractCpdAttachment(
+          await file.arrayBuffer(),
+        );
+        if (!found) {
+          setImportHint("This PDF has no .cpd attachment.");
+          return;
+        }
+        setImportHint(null);
+        loadWorksheet(found.source, found.name, found.uiOverrides);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setImportHint(`Could not read PDF: ${message}`);
+      }
+      return;
+    }
+    setImportHint(null);
+    loadWorksheet(await file.text(), file.name);
+  }
 
   const handleReset = useCallback(async () => {
     const start = await fetchStartWorksheet();
@@ -338,7 +363,7 @@ export function Workspace() {
                   <FileUp className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Open .cpd</TooltipContent>
+              <TooltipContent>Open .cpd or PDF</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -394,7 +419,13 @@ export function Workspace() {
                         state.viewMode === "results"
                           ? document.querySelector<HTMLElement>(".calcpad-paper")
                           : null;
-                      await exportPdfReport(fileName, report.html, paperEl);
+                      await exportPdfReport(
+                        fileName,
+                        report.html,
+                        paperEl,
+                        sourceRef.current,
+                        state.uiOverrides,
+                      );
                     } catch (err) {
                       console.warn("[calcpad] pdf export failed", err);
                     } finally {
@@ -405,7 +436,7 @@ export function Workspace() {
                   <FileText className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{exportingPdf ? "Writing PDF…" : "Export PDF"}</TooltipContent>
+              <TooltipContent>{exportingPdf ? "Writing PDF…" : "Export PDF with worksheet"}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -500,6 +531,7 @@ export function Workspace() {
             </span>
           )}
           {bootError && <span className="truncate text-destructive">{bootError}</span>}
+          {importHint && <span className="truncate text-destructive">{importHint}</span>}
           <span className="ml-auto hidden sm:inline">
             {options.degrees === 0 ? "DEG" : options.degrees === 1 ? "RAD" : "GRA"} · {options.decimals} dp
           </span>
@@ -510,12 +542,12 @@ export function Workspace() {
         <input
           ref={fileRef}
           type="file"
-          accept=".cpd,.txt,.cpdz"
+          accept=".cpd,.txt,.cpdz,.pdf,application/pdf"
           className="hidden"
           onChange={async (e) => {
             const file = e.target.files?.[0];
             if (!file) return;
-            loadWorksheet(await file.text(), file.name);
+            await openPickedFile(file);
             e.target.value = "";
           }}
         />

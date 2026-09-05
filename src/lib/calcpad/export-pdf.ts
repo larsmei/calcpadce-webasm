@@ -29,7 +29,7 @@ const BLOCK_RE = /^(P|H1|H2|H3|H4|H5|H6|TABLE|UL|OL|PRE|BLOCKQUOTE|DIV|SECTION|A
 const HEADING_RE = /^H[1-6]$/;
 
 function reportTitle(fileName: string) {
-  return fileName.replace(/\.(cpd|txt|html)$/i, "") || "worksheet";
+  return fileName.replace(/\.(cpd|cpdz|txt|html|pdf)$/i, "") || "worksheet";
 }
 
 function waitForImages(root: ParentNode) {
@@ -550,7 +550,13 @@ body {
 }
 `;
 
-export async function exportPdfReport(fileName: string, html: string, paper?: HTMLElement | null) {
+export async function exportPdfReport(
+  fileName: string,
+  html: string,
+  paper?: HTMLElement | null,
+  source?: string,
+  uiOverrides?: Record<string, string>,
+) {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
     import("html2canvas-pro"),
     import("jspdf"),
@@ -647,6 +653,29 @@ export async function exportPdfReport(fileName: string, html: string, paper?: HT
   measure.remove();
   pack.replaceChildren();
   const pages = packPages(units, pack);
+  const title = reportTitle(fileName);
+
+  const saveWithWorksheet = async (pdf: InstanceType<typeof jsPDF>) => {
+    const raw = new Uint8Array(pdf.output("arraybuffer") as ArrayBuffer);
+    const attached =
+      source != null && source.length
+        ? await (await import("./pdf-attachment.ts")).embedWorksheetAttachment(
+            raw,
+            source,
+            fileName,
+            uiOverrides ?? {},
+          )
+        : raw;
+    const copy = new Uint8Array(attached.byteLength);
+    copy.set(attached);
+    const blob = new Blob([copy], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${title}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   try {
     const pdf = new jsPDF({
@@ -655,11 +684,10 @@ export async function exportPdfReport(fileName: string, html: string, paper?: HT
       orientation: "portrait",
       compress: true,
     });
-    const title = reportTitle(fileName);
     pdf.setProperties({ title: `${title} — CalcpadCE`, creator: "CalcpadCE WebAssembly" });
 
     if (!pages.length) {
-      pdf.save(`${title}.pdf`);
+      await saveWithWorksheet(pdf);
       return;
     }
 
@@ -700,7 +728,7 @@ export async function exportPdfReport(fileName: string, html: string, paper?: HT
         "FAST",
       );
     }
-    pdf.save(`${title}.pdf`);
+    await saveWithWorksheet(pdf);
   } finally {
     iframe.remove();
   }
