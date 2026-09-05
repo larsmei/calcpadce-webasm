@@ -5,6 +5,10 @@ type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 const ROWS: Array<[string, string]> = [
   ["Comment", "' text   or   \"text\""],
   ["Input", "r = ? {5} cm"],
+  ["UI field", "#UI L = 6m"],
+  ["Dropdown", '#UI {"type":"dropdown","keys":["A","B"],"values":["1","2"]} n = 1'],
+  ["Form only", "#pre  …  #end pre"],
+  ["Report only", "#post  …  #end post"],
   ["Convert units", "V|dm^3"],
   ["Function", "f(x) = x^2 - 3*x"],
   ["Plot", "$Plot{f(x) @ x = 0 : 2π}"],
@@ -24,7 +28,7 @@ export function SyntaxSheet({ open, onOpenChange }: Props) {
         <DialogHeader>
           <DialogTitle>Calcpad syntax</DialogTitle>
           <DialogDescription>
-            A short subset. The WASM engine implements the full CalcpadCE language from Calcpad.Core.
+            A short subset. Form / Results follows CalcpadCE input vs report (#pre, #post, #UI).
           </DialogDescription>
         </DialogHeader>
         <table className="w-full text-sm">

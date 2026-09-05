@@ -1,7 +1,12 @@
 export type AngleMode = 0 | 1 | 2; // deg, rad, gra
 
+export type ViewMode = "form" | "results";
+
 export type EngineOptions = {
   calculate: boolean;
+  enableUi: boolean;
+  forPrint: boolean;
+  uiOverrides: Record<string, string>;
   decimals: number;
   degrees: AngleMode;
   complex: boolean;
@@ -35,16 +40,21 @@ export type ExampleMeta = {
 };
 
 export const DEFAULT_WORKSHEET = `' Calculate the volume of a cylinder
-' Click the underlined inputs in the report to change r or h.
+' Form (F4) compiles question marks to input boxes. Results (F5) calculates.
 r = ? {5} cm
 h = ? {12} cm
+#post
 V = π * r^2 * h
 V|dm^3
 V|gal
+#end post
 `;
 
 export const DEFAULT_OPTIONS: EngineOptions = {
   calculate: true,
+  enableUi: false,
+  forPrint: false,
+  uiOverrides: {},
   decimals: 6,
   degrees: 0,
   complex: false,
@@ -56,3 +66,7 @@ export const DEFAULT_OPTIONS: EngineOptions = {
   plotWidth: 520,
   plotHeight: 320,
 };
+
+export function hasUiDirective(source: string) {
+  return /(^|\n)[ \t]*#ui\b/i.test(source);
+}

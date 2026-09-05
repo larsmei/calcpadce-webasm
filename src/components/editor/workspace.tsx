@@ -20,9 +20,10 @@ import { Paper } from "@/components/editor/paper";
 import { SettingsDialog } from "@/components/editor/settings-dialog";
 import { ExamplesPanel } from "@/components/editor/examples-panel";
 import { SyntaxSheet } from "@/components/editor/syntax-sheet";
-import { bootEngine, parseWorksheet } from "@/lib/calcpad/engine";
+import { bootEngine, optionsForView, parseWorksheet } from "@/lib/calcpad/engine";
 import { applyInputValues } from "@/lib/calcpad/inputs";
 import { useCalcpadStore } from "@/lib/calcpad/store";
+import { hasUiDirective, type ViewMode } from "@/lib/calcpad/types";
 import { cn } from "@/lib/utils";
 import { assetUrl } from "@/lib/calcpad/asset-url";
 import { exportPdfReport } from "@/lib/calcpad/export-pdf";
@@ -69,11 +70,15 @@ export function Workspace() {
   const lastRunMs = useCalcpadStore((s) => s.lastRunMs);
   const fileName = useCalcpadStore((s) => s.fileName);
   const autoRun = useCalcpadStore((s) => s.autoRun);
+  const viewMode = useCalcpadStore((s) => s.viewMode);
+  const uiOverrides = useCalcpadStore((s) => s.uiOverrides);
   const setSource = useCalcpadStore((s) => s.setSource);
   const setOptions = useCalcpadStore((s) => s.setOptions);
   const setResult = useCalcpadStore((s) => s.setResult);
   const setStatus = useCalcpadStore((s) => s.setStatus);
   const setFileName = useCalcpadStore((s) => s.setFileName);
+  const setViewMode = useCalcpadStore((s) => s.setViewMode);
+  const setUiOverrides = useCalcpadStore((s) => s.setUiOverrides);
   const resetWorksheet = useCalcpadStore((s) => s.resetWorksheet);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -102,10 +107,11 @@ export function Workspace() {
     try {
       setStatus("running");
       const t0 = performance.now();
-      const result = parseWorksheet(sourceRef.current, {
-        ...useCalcpadStore.getState().options,
-        fileName: useCalcpadStore.getState().fileName,
-      });
+      const state = useCalcpadStore.getState();
+      const result = parseWorksheet(
+        sourceRef.current,
+        optionsForView(state.options, state.viewMode, state.uiOverrides, state.fileName),
+      );
       setResult(result.html, result.errors, Math.round(performance.now() - t0));
       setMobileTab("paper");
     } catch (err) {
@@ -113,6 +119,14 @@ export function Workspace() {
       setStatus("error", message);
     }
   }, [setResult, setStatus]);
+
+  const handleRun = useCallback(() => {
+    if (useCalcpadStore.getState().viewMode === "form") {
+      setViewMode("results");
+      return;
+    }
+    run();
+  }, [run, setViewMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +159,12 @@ export function Workspace() {
     };
   }, [source, options, autoRun, run]);
 
+  useEffect(() => {
+    const current = useCalcpadStore.getState().status;
+    if (current === "idle" || current === "booting") return;
+    run();
+  }, [viewMode, uiOverrides, run]);
+
   const engineLabel =
     status === "running"
       ? "Computing"
@@ -164,10 +184,52 @@ export function Workspace() {
     if (next !== sourceRef.current) setSource(next);
   }
 
+  function handleUiChange(next: Record<string, string>) {
+    const prev = useCalcpadStore.getState().uiOverrides;
+    const keys = new Set([...Object.keys(prev), ...Object.keys(next)]);
+    let changed = false;
+    const merged = { ...prev };
+    for (const key of keys) {
+      if ((next[key] ?? "") !== (prev[key] ?? "")) {
+        merged[key] = next[key] ?? prev[key];
+        changed = true;
+      }
+    }
+    if (changed) setUiOverrides(merged);
+  }
+
+  function loadWorksheet(text: string, name: string) {
+    setSource(text);
+    setFileName(name);
+    setUiOverrides({});
+    if (hasUiDirective(text)) setViewMode("form");
+  }
+
+  function switchView(next: ViewMode) {
+    setViewMode(next);
+    setMobileTab("paper");
+  }
+
+  const paper = (
+    <Paper
+      html={html}
+      booting={status === "booting"}
+      viewMode={viewMode}
+      onJumpLine={jumpToLine}
+      onInputsChange={handleInputs}
+      onUiChange={handleUiChange}
+      emptyHint={
+        viewMode === "form"
+          ? "Form compiles ? and #UI into input boxes. Run or Results calculates the report."
+          : undefined
+      }
+    />
+  );
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex h-dvh min-h-0 flex-col bg-background text-foreground">
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-3 print:hidden md:px-4">
+        <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-1.5 print:hidden md:px-4">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="grid size-8 place-items-center rounded-[var(--radius-sm)] bg-primary text-primary-foreground">
               <SquareAsterisk className="size-4" strokeWidth={2} />
@@ -175,44 +237,56 @@ export function Workspace() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="truncate text-sm font-medium tracking-tight">CalcpadCE</h1>
-                <Badge variant="default">WebAssembly</Badge>
+                <Badge variant="default" className="hidden sm:inline-flex">
+                  WebAssembly
+                </Badge>
               </div>
-              <p className="hidden truncate text-[11px] text-muted-foreground sm:block">
+              <p className="hidden truncate text-[11px] text-muted-foreground md:block">
                 {fileName} · Calcpad.Core in the browser
               </p>
             </div>
           </div>
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1.5">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   size="sm"
-                  onClick={run}
+                  onClick={handleRun}
                   disabled={status === "booting" || status === "running"}
                 >
                   <Play className="size-3.5" />
-                  Run
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Run worksheet (Ctrl/⌘ Enter)</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="sm"
-                  variant={options.calculate ? "secondary" : "outline"}
-                  className="hidden sm:inline-flex"
-                  onClick={() => setOptions({ calculate: !options.calculate })}
-                >
-                  {options.calculate ? "Results" : "Form"}
+                  <span className="hidden sm:inline">{viewMode === "form" ? "Calculate" : "Run"}</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {options.calculate
-                  ? "Show calculated results. Switch to Form to edit ? inputs."
-                  : "Show input form. Switch back to calculate."}
+                {viewMode === "form"
+                  ? "Calculate and open Results (F5)"
+                  : "Run worksheet (Ctrl/⌘ Enter)"}
               </TooltipContent>
             </Tooltip>
+            <div
+              className="inline-flex rounded-[var(--radius-sm)] border border-border bg-muted p-0.5"
+              role="group"
+              aria-label="Form or Results"
+              title="Form = input boxes (F4). Results = calculated report (F5)."
+            >
+              <Button
+                size="sm"
+                variant={viewMode === "form" ? "default" : "ghost"}
+                className="h-8 px-2.5 sm:min-w-[4.25rem] sm:px-3"
+                onClick={() => switchView("form")}
+              >
+                Form
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === "results" ? "default" : "ghost"}
+                className="h-8 px-2.5 sm:min-w-[4.25rem] sm:px-3"
+                onClick={() => switchView("results")}
+              >
+                Results
+              </Button>
+            </div>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button size="icon-sm" variant="ghost" onClick={() => setExamplesOpen(true)}>
@@ -223,7 +297,7 @@ export function Workspace() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon-sm" variant="ghost" onClick={() => setSyntaxOpen(true)}>
+                <Button size="icon-sm" variant="ghost" className="hidden sm:inline-flex" onClick={() => setSyntaxOpen(true)}>
                   <Cpu className="size-4" />
                 </Button>
               </TooltipTrigger>
@@ -242,6 +316,7 @@ export function Workspace() {
                 <Button
                   size="icon-sm"
                   variant="ghost"
+                  className="hidden sm:inline-flex"
                   onClick={() => downloadText(fileName, source, "text/plain")}
                 >
                   <Download className="size-4" />
@@ -273,8 +348,24 @@ export function Workspace() {
                   onClick={async () => {
                     setExportingPdf(true);
                     try {
-                      const paper = document.querySelector<HTMLElement>(".calcpad-paper");
-                      await exportPdfReport(fileName, html, paper);
+                      const state = useCalcpadStore.getState();
+                      const report =
+                        state.viewMode === "results"
+                          ? { html }
+                          : parseWorksheet(
+                              sourceRef.current,
+                              optionsForView(
+                                state.options,
+                                "results",
+                                state.uiOverrides,
+                                state.fileName,
+                              ),
+                            );
+                      const paperEl =
+                        state.viewMode === "results"
+                          ? document.querySelector<HTMLElement>(".calcpad-paper")
+                          : null;
+                      await exportPdfReport(fileName, report.html, paperEl);
                     } catch (err) {
                       console.warn("[calcpad] pdf export failed", err);
                     } finally {
@@ -289,7 +380,7 @@ export function Workspace() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon-sm" variant="ghost" onClick={resetWorksheet}>
+                <Button size="icon-sm" variant="ghost" className="hidden sm:inline-flex" onClick={resetWorksheet}>
                   <RotateCcw className="size-4" />
                 </Button>
               </TooltipTrigger>
@@ -325,7 +416,7 @@ export function Workspace() {
             )}
             onClick={() => setMobileTab("paper")}
           >
-            Output
+            {viewMode === "form" ? "Form" : "Results"}
           </button>
         </div>
 
@@ -333,31 +424,19 @@ export function Workspace() {
           {isDesktop ? (
           <Group orientation="horizontal" className="h-full">
             <Panel defaultSize={46} minSize={28} className="min-h-0 print:hidden">
-              <CodeEditor value={source} onChange={setSource} onRun={run} focusLine={focusLine} />
+              <CodeEditor value={source} onChange={setSource} onRun={handleRun} focusLine={focusLine} />
             </Panel>
             <ResizeSeparator className="w-px bg-border hover:bg-primary/60 data-[separator=active]:bg-primary print:hidden" />
             <Panel defaultSize={54} minSize={30} className="min-h-0 bg-paper">
-              <Paper
-                html={html}
-                booting={status === "booting"}
-                onJumpLine={jumpToLine}
-                onInputsChange={handleInputs}
-              />
+              {paper}
             </Panel>
           </Group>
           ) : (
           <div className="flex h-full min-h-0 flex-col print:hidden">
             {mobileTab === "code" ? (
-              <CodeEditor value={source} onChange={setSource} onRun={run} focusLine={focusLine} />
+              <CodeEditor value={source} onChange={setSource} onRun={handleRun} focusLine={focusLine} />
             ) : (
-              <div className="min-h-0 flex-1 bg-paper">
-                <Paper
-                  html={html}
-                  booting={status === "booting"}
-                  onJumpLine={jumpToLine}
-                  onInputsChange={handleInputs}
-                />
-              </div>
+              <div className="min-h-0 flex-1 bg-paper">{paper}</div>
             )}
           </div>
           )}
@@ -384,6 +463,7 @@ export function Workspace() {
             {engineLabel}
           </span>
           {lastRunMs != null && status !== "booting" && <span>{lastRunMs} ms</span>}
+          <span className="hidden sm:inline">{viewMode === "form" ? "Input form" : "Report"}</span>
           {errors.length > 0 && (
             <span className="truncate text-destructive">
               {errors.length} issue{errors.length === 1 ? "" : "s"}
@@ -406,8 +486,7 @@ export function Workspace() {
           onChange={async (e) => {
             const file = e.target.files?.[0];
             if (!file) return;
-            setSource(await file.text());
-            setFileName(file.name);
+            loadWorksheet(await file.text(), file.name);
             e.target.value = "";
           }}
         />
@@ -421,11 +500,7 @@ export function Workspace() {
       <ExamplesPanel
         open={examplesOpen}
         onOpenChange={setExamplesOpen}
-        onPick={(title, text, file) => {
-          setSource(text);
-          setFileName(file);
-          void title;
-        }}
+        onPick={(_title, text, file) => loadWorksheet(text, file)}
       />
       <SyntaxSheet open={syntaxOpen} onOpenChange={setSyntaxOpen} />
     </TooltipProvider>

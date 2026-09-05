@@ -76,6 +76,77 @@
   border-bottom: 1px dashed color-mix(in oklab, #1c1a16 35%, transparent);
 }
 
+.calcpad-paper[data-view="form"] [data-source-line],
+.calcpad-paper[data-view="form"] [id^="line-"] {
+  cursor: default;
+}
+
+.calcpad-paper[data-view="form"] input[name="Var"],
+.calcpad-paper[data-view="form"] .calcpad-ui-input,
+.calcpad-paper[data-view="form"] .calcpad-ui-dropdown {
+  background: #fffde8;
+}
+
+.calcpad-paper input[name="Var"],
+.calcpad-paper input[class*="input-"],
+.calcpad-paper .calcpad-ui-input {
+  min-width: 4.5em;
+  margin: 0 2pt;
+  vertical-align: middle;
+}
+
+.calcpad-paper .calcpad-ui-dropdown {
+  min-width: 8em;
+  max-width: 100%;
+  margin: 0 2pt;
+  vertical-align: middle;
+}
+
+.calcpad-paper .calcpad-ui-radio {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5em 1em;
+  vertical-align: middle;
+}
+
+.calcpad-paper .calcpad-ui-radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  cursor: pointer;
+}
+
+.calcpad-paper .calcpad-ui-checkbox {
+  width: 1em;
+  height: 1em;
+  vertical-align: middle;
+}
+
+.calcpad-paper .calcpad-ui-datagrid {
+  margin: 0.4em 0;
+}
+
+.calcpad-paper .calcpad-ui-grid {
+  border-collapse: collapse;
+}
+
+.calcpad-paper .calcpad-ui-grid th,
+.calcpad-paper .calcpad-ui-grid td {
+  border: 1pt solid var(--color-border);
+  padding: 2pt 4pt;
+  vertical-align: middle;
+}
+
+.calcpad-paper .calcpad-ui-grid th {
+  background: var(--color-muted);
+  font-weight: 600;
+}
+
+.calcpad-paper .calcpad-ui-grid input {
+  width: 5.5em;
+  text-align: right;
+}
+
 .calcpad-paper [data-source-line],
 .calcpad-paper [id^="line-"] {
   cursor: pointer;

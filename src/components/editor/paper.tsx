@@ -1,6 +1,13 @@
 import { useEffect, useRef } from "react";
-import { collectPaperInputs } from "@/lib/calcpad/inputs";
+import {
+  collectPaperInputs,
+  collectUiOverrides,
+  formHtml,
+  hydrateUiDatagrids,
+  isPaperControl,
+} from "@/lib/calcpad/inputs";
 import { runEmbeddedScripts } from "@/lib/calcpad/run-scripts";
+import type { ViewMode } from "@/lib/calcpad/types";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -8,8 +15,10 @@ type Props = {
   emptyHint?: string;
   className?: string;
   booting?: boolean;
+  viewMode?: ViewMode;
   onJumpLine?: (line: number) => void;
   onInputsChange?: (values: string[]) => void;
+  onUiChange?: (overrides: Record<string, string>) => void;
 };
 
 export function Paper({
@@ -17,23 +26,30 @@ export function Paper({
   emptyHint,
   className,
   booting,
+  viewMode = "results",
   onJumpLine,
   onInputsChange,
+  onUiChange,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const jumpRef = useRef(onJumpLine);
   const inputsRef = useRef(onInputsChange);
+  const uiRef = useRef(onUiChange);
+  const modeRef = useRef(viewMode);
   jumpRef.current = onJumpLine;
   inputsRef.current = onInputsChange;
+  uiRef.current = onUiChange;
+  modeRef.current = viewMode;
 
   useEffect(() => {
     const root = ref.current;
     if (!root) return;
 
     const commitInputs = () => {
-      const handler = inputsRef.current;
-      if (!handler) return;
-      handler(collectPaperInputs(root));
+      inputsRef.current?.(collectPaperInputs(root));
+    };
+    const commitUi = () => {
+      uiRef.current?.(collectUiOverrides(root));
     };
 
     const onClick = (e: MouseEvent) => {
@@ -46,6 +62,8 @@ export function Paper({
         fold.classList.toggle("unfold");
         return;
       }
+
+      if (isPaperControl(target)) return;
 
       const underline = target.closest("u[class*='input-']") as HTMLElement | null;
       if (underline && inputsRef.current) {
@@ -74,6 +92,8 @@ export function Paper({
         return;
       }
 
+      if (modeRef.current === "form") return;
+
       const lineEl = target.closest<HTMLElement>("[data-source-line], [id^='line-']");
       if (lineEl && jumpRef.current) {
         const fromData = lineEl.getAttribute("data-source-line");
@@ -85,13 +105,26 @@ export function Paper({
 
     const onChange = (e: Event) => {
       const target = e.target as HTMLElement | null;
-      if (target?.matches("input[name='Var'], input[class*='input-']")) {
+      if (!target) return;
+      if (target.closest("[data-ui-var]")) {
+        commitUi();
+        return;
+      }
+      if (target.matches("input[name='Var'], input[class*='input-']")) {
         commitInputs();
       }
     };
 
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      if (e.target instanceof HTMLInputElement) e.target.blur();
+    };
+
+    hydrateUiDatagrids(root);
+
     root.addEventListener("click", onClick);
     root.addEventListener("change", onChange);
+    root.addEventListener("keydown", onKey);
     root.querySelectorAll(".dvcs:has(.block) > :first-child").forEach((el) => {
       (el as HTMLElement).innerHTML = "&hairsp;";
     });
@@ -104,8 +137,9 @@ export function Paper({
       ac.abort();
       root.removeEventListener("click", onClick);
       root.removeEventListener("change", onChange);
+      root.removeEventListener("keydown", onKey);
     };
-  }, [html]);
+  }, [html, viewMode]);
 
   if (booting) {
     return (
@@ -136,7 +170,8 @@ export function Paper({
     <div
       ref={ref}
       className={cn("calcpad-paper h-full overflow-auto px-6 py-6 md:px-10 md:py-8", className)}
-      dangerouslySetInnerHTML={{ __html: html }}
+      data-view={viewMode}
+      dangerouslySetInnerHTML={{ __html: formHtml(html, viewMode) }}
     />
   );
 }

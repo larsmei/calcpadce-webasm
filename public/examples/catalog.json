@@ -1,5 +1,11 @@
 [
   {
+    "title": "Input Form / Results",
+    "file": "ui-beam-form.cpd",
+    "bytes": 474,
+    "preview": "'<!-- Input form vs calculated report. Switch Form / Results in the toolbar. -->\n'<h2>Simply supported beam</h2>\n#pre\n'<h3>Input data</h3>\n#UI 'Span - 'L = 5m\n"
+  },
+  {
     "title": "Cylinder Volume",
     "file": "cylinder-volume.cpd",
     "bytes": 85,

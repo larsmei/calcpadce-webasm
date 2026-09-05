@@ -62,7 +62,10 @@ public static class CalcpadBridge
                 SourceFilePath = options.FileName ?? "worksheet.cpd",
                 PathRoots = macroParser.PathRoots,
                 Debug = options.Debug,
-                ShowWarnings = true
+                ShowWarnings = true,
+                EnableUi = options.EnableUi,
+                ForPrint = options.ForPrint,
+                UiOverrides = options.UiOverrides
             };
             parser.Parse(unwrapped, options.Calculate, getXml: false);
             if (parser.Errors is not null)
@@ -101,6 +104,9 @@ public static class CalcpadBridge
     private sealed class ParseOptions
     {
         public bool Calculate { get; set; } = true;
+        public bool EnableUi { get; set; }
+        public bool ForPrint { get; set; }
+        public Dictionary<string, string>? UiOverrides { get; set; }
         public int Decimals { get; set; } = 6;
         public int Degrees { get; set; } = 0;
         public bool Complex { get; set; }

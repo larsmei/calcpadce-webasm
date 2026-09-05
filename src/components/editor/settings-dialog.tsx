@@ -25,7 +25,7 @@ export function SettingsDialog({ open, onOpenChange, onExportHtml, onPrint }: Pr
         <DialogHeader>
           <DialogTitle>Worksheet settings</DialogTitle>
           <DialogDescription>
-            These map to Calcpad.Core math and plot settings. The engine runs entirely in your browser.
+            These map to Calcpad.Core math and plot settings. Use Form / Results in the toolbar for input vs report.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
@@ -80,14 +80,6 @@ export function SettingsDialog({ open, onOpenChange, onExportHtml, onPrint }: Pr
           <label className="flex items-center gap-2 text-sm text-foreground sm:col-span-2">
             <input
               type="checkbox"
-              checked={options.calculate}
-              onChange={(e) => setOptions({ calculate: e.target.checked })}
-            />
-            Calculate results (off = input form)
-          </label>
-          <label className="flex items-center gap-2 text-sm text-foreground sm:col-span-2">
-            <input
-              type="checkbox"
               checked={options.complex}
               onChange={(e) => setOptions({ complex: e.target.checked })}
             />
@@ -118,13 +110,17 @@ export function SettingsDialog({ open, onOpenChange, onExportHtml, onPrint }: Pr
             Auto-run after edits
           </label>
         </div>
-        <div className="flex flex-wrap gap-2 border-t border-border pt-3">
-          <Button size="sm" variant="secondary" onClick={onExportHtml}>
-            Export HTML
-          </Button>
-          <Button size="sm" variant="secondary" onClick={onPrint}>
-            Print report
-          </Button>
+        <div className="flex justify-end gap-2">
+          {onExportHtml ? (
+            <Button variant="outline" onClick={onExportHtml}>
+              Export HTML
+            </Button>
+          ) : null}
+          {onPrint ? (
+            <Button variant="outline" onClick={onPrint}>
+              Print
+            </Button>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

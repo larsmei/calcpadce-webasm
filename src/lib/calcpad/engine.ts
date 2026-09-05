@@ -1,4 +1,4 @@
-import type { EngineOptions, ParseResult } from "./types";
+import type { EngineOptions, ParseResult, ViewMode } from "./types";
 import { assetUrl } from "./asset-url";
 
 declare global {
@@ -120,6 +120,22 @@ export async function bootEngine(): Promise<void> {
     assembliesReady = false;
     throw err;
   }
+}
+
+export function optionsForView(
+  options: EngineOptions,
+  viewMode: ViewMode,
+  uiOverrides: Record<string, string>,
+  fileName: string,
+): EngineOptions {
+  return {
+    ...options,
+    fileName,
+    calculate: viewMode === "results",
+    enableUi: viewMode === "form",
+    forPrint: viewMode === "results",
+    uiOverrides,
+  };
 }
 
 export function parseWorksheet(source: string, options: EngineOptions): ParseResult {

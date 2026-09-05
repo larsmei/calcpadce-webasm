@@ -1,0 +1,18 @@
+'<!-- Input form vs calculated report. Switch Form / Results in the toolbar. -->
+'<h2>Simply supported beam</h2>
+#pre
+'<h3>Input data</h3>
+#UI 'Span - 'L = 5m
+#UI 'Uniform load - 'q = 10kN/m
+'<p>Support</p>
+#UI {"type":"dropdown","keys":["Pinned  qL²/8","Fixed  qL²/12"],"values":["8","12"]} k_M = 8
+#end pre
+#post
+'<h3>Results</h3>
+'Bending moment
+M_max = q*L^2/k_M
+'Shear force
+V_max = q*L/2
+'Mid-span deflection with EI = 1 kN·m²
+δ = 5*q*L^4/(384*1kN*m^2)
+#end post

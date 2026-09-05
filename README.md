@@ -11,7 +11,8 @@ Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE)
 - Real/complex numbers, vectors, matrices
 - SI / Imperial / USCS units and custom units
 - `$Plot`, `$Map`, `$Integral`, `$Root`, `$Sum`, …
-- `#if` / `#for` / `#while` / `#def` and `? {value}` input fields
+- `#if` / `#for` / `#while` / `#def`, `? {value}` input fields, and `#UI` widgets
+- **Form / Results** (Calcpad F4/F5): Form compiles `?` and `#UI` into a fill-in form (`#pre` shown, `#post` hidden). Results calculates the report.
 - Syntax-highlighted editor, example worksheets, HTML export, A4 PDF export of the rendered report
 
 Not ported (need a filesystem or extra native tooling): `#include` of arbitrary files, CSV/Excel I/O, Word export.
