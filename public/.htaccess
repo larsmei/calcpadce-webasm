@@ -3,6 +3,10 @@ Options -Indexes
 AddType application/wasm .wasm
 AddType application/javascript .mjs
 
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE application/wasm application/javascript text/css text/html application/json text/plain
+</IfModule>
+
 <IfModule mod_headers.c>
   <FilesMatch "\.(wasm|js|css)$">
     Header set Cache-Control "public, max-age=31536000, immutable"

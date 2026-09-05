@@ -9,7 +9,11 @@
     <BlazorEnableTimeZoneSupport>false</BlazorEnableTimeZoneSupport>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
-    <WasmStripILAfterAOT>false</WasmStripILAfterAOT>
+    <RunAOTCompilation>true</RunAOTCompilation>
+    <OptimizationPreference>Speed</OptimizationPreference>
+    <WasmStripILAfterAOT>true</WasmStripILAfterAOT>
+    <WasmEnableSIMD>true</WasmEnableSIMD>
+    <WasmEnableExceptionHandling>true</WasmEnableExceptionHandling>
     <CompressionEnabled>false</CompressionEnabled>
     <StaticWebAssetBasePath>calcpad-wasm</StaticWebAssetBasePath>
     <OverrideHtmlAssetPlaceholders>false</OverrideHtmlAssetPlaceholders>
@@ -21,7 +25,6 @@
     <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
     <EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
     <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
-    <WasmEnableSIMD>true</WasmEnableSIMD>
     <BlazorWebAssemblyJiterpreter>true</BlazorWebAssemblyJiterpreter>
     <CalcpadNoOpenXml>true</CalcpadNoOpenXml>
   </PropertyGroup>

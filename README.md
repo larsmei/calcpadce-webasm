@@ -4,7 +4,7 @@
 
 No server is required. Host the static zip on Apache, nginx, or any file server.
 
-Latest release: [v0.3.10](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.10)
+Latest release: [v0.3.11](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.11)
 
 Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE) (MIT).
 
@@ -18,7 +18,7 @@ Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE)
 - Calcpad syntax highlighting (including unclosed quotes)
 - Paste screenshots into the source at the cursor
 - Example catalog and HTML report export
-- Fast engine path: plots, integrals and `$Repeat` skip `Expression.Compile` in the browser; the download is ~8 MB (Excel/Word assemblies are not shipped)
+- Fast engine path: native WebAssembly AOT plus RPN evaluation (no `Expression.Compile` in the browser). First load is heavier (~25 MB engine); plots, integrals and `$Repeat` are much quicker after that.
 
 ### Form / Results (F4 / F5)
 
@@ -81,7 +81,7 @@ Acrobat shows the worksheet under the paperclip / Attachments panel.
 
 The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page.
 
-Download **`calcpadce-static-v0.3.10.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+Download **`calcpadce-static-v0.3.11.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
 
 ```
 index.html
@@ -91,7 +91,7 @@ examples/
 .htaccess
 ```
 
-Apache already serving `.wasm` as `application/wasm` is enough. The included `.htaccess` sets MIME types and a SPA fallback.
+Apache already serving `.wasm` as `application/wasm` is enough. The included `.htaccess` sets MIME types, gzip for `.wasm`, and a SPA fallback.
 
 The site must be at the domain root (e.g. `https://rechner.example.de/`), not in a subfolder, unless you set Vite `base`. After replacing files, hard-reload the browser.
 
@@ -116,14 +116,14 @@ npm run build:static
 
 ## Rebuild the engine
 
-Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) and the `wasm-tools` workload (`dotnet workload install wasm-tools`).
 
 ```bash
 dotnet publish wasm/Calcpad.Wasm.csproj -c Release -p:CalcpadNoOpenXml=true
 # copy wasm/publish/wwwroot/calcpad-wasm → public/calcpad-wasm
 ```
 
-The JS side boots `blazor.webassembly.js` and calls `Calcpad.Wasm.ParseRaw` (JSExport: metadata JSON + raw HTML). `Parse` remains as a JSON-envelope fallback.
+Publish runs AOT (`RunAOTCompilation`). The JS side boots `blazor.webassembly.js` and calls `Calcpad.Wasm.ParseRaw` (JSExport: metadata JSON + raw HTML). `Parse` remains as a JSON-envelope fallback.
 
 ## Layout
 
