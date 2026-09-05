@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BookOpen,
   Download,
+  FileText,
   FileUp,
   Play,
   Printer,
@@ -24,6 +25,7 @@ import { applyInputValues } from "@/lib/calcpad/inputs";
 import { useCalcpadStore } from "@/lib/calcpad/store";
 import { cn } from "@/lib/utils";
 import { assetUrl } from "@/lib/calcpad/asset-url";
+import { exportPdfReport } from "@/lib/calcpad/export-pdf";
 
 function downloadText(filename: string, contents: string, mime: string) {
   const blob = new Blob([contents], { type: mime });
@@ -80,6 +82,7 @@ export function Workspace() {
   const [mobileTab, setMobileTab] = useState<"code" | "paper">("paper");
   const [mounted, setMounted] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [focusLine, setFocusLine] = useState<{ line: number; key: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<number | null>(null);
@@ -253,11 +256,36 @@ export function Workspace() {
                   variant="ghost"
                   className="hidden md:inline-flex"
                   onClick={() => void exportHtmlReport(fileName, html)}
+                  disabled={!html}
                 >
                   <Printer className="size-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Export HTML report</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Export PDF"
+                  disabled={!html || exportingPdf}
+                  onClick={async () => {
+                    setExportingPdf(true);
+                    try {
+                      const paper = document.querySelector<HTMLElement>(".calcpad-paper");
+                      await exportPdfReport(fileName, html, paper);
+                    } catch (err) {
+                      console.warn("[calcpad] pdf export failed", err);
+                    } finally {
+                      setExportingPdf(false);
+                    }
+                  }}
+                >
+                  <FileText className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{exportingPdf ? "Writing PDF…" : "Export PDF"}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
