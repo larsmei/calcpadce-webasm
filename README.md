@@ -12,9 +12,9 @@ Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE)
 - SI / Imperial / USCS units and custom units
 - `$Plot`, `$Map`, `$Integral`, `$Root`, `$Sum`, …
 - `#if` / `#for` / `#while` / `#def` and `? {value}` input fields
-- Syntax-highlighted editor, example worksheets, HTML export
+- Syntax-highlighted editor, example worksheets, HTML export, A4 PDF export of the rendered report
 
-Not ported (need a filesystem or extra native tooling): `#include` of arbitrary files, CSV/Excel I/O, Word/PDF export.
+Not ported (need a filesystem or extra native tooling): `#include` of arbitrary files, CSV/Excel I/O, Word export.
 
 ## Host on Apache / nginx / any static server
 

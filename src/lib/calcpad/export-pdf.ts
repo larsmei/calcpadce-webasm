@@ -1,10 +1,20 @@
 import { assetUrl } from "@/lib/calcpad/asset-url";
 
-const A4_WIDTH_PX = 794;
-const A4_HEIGHT_PX = 1123;
-const PAGE_MARGIN_PX = 40;
-const INNER_WIDTH = A4_WIDTH_PX - PAGE_MARGIN_PX * 2;
-const INNER_HEIGHT = A4_HEIGHT_PX - PAGE_MARGIN_PX * 2;
+/** CSS px per millimetre at the standard 96 dpi used by browsers. */
+const MM = 96 / 25.4;
+
+const PAGE_WIDTH_MM = 210;
+const PAGE_HEIGHT_MM = 297;
+const MARGIN_LEFT_MM = 30;
+const MARGIN_RIGHT_MM = 20;
+const MARGIN_TOP_MM = 30;
+const MARGIN_BOTTOM_MM = 30;
+const CONTENT_WIDTH_MM = PAGE_WIDTH_MM - MARGIN_LEFT_MM - MARGIN_RIGHT_MM; // 160
+const CONTENT_HEIGHT_MM = PAGE_HEIGHT_MM - MARGIN_TOP_MM - MARGIN_BOTTOM_MM; // 237
+
+const CONTENT_WIDTH_PX = CONTENT_WIDTH_MM * MM;
+const CONTENT_HEIGHT_PX = CONTENT_HEIGHT_MM * MM;
+
 const KEEP_SELECTOR = [
   "svg",
   "img",
@@ -14,6 +24,9 @@ const KEEP_SELECTOR = [
   ".plot",
   "[data-plot]",
 ].join(",");
+
+const BLOCK_RE = /^(P|H1|H2|H3|H4|H5|H6|TABLE|UL|OL|PRE|BLOCKQUOTE|DIV|SECTION|ARTICLE|DL|HR|FIGURE)$/;
+const HEADING_RE = /^H[1-6]$/;
 
 function reportTitle(fileName: string) {
   return fileName.replace(/\.(cpd|txt|html)$/i, "") || "worksheet";
@@ -46,13 +59,137 @@ function replaceCanvases(source: HTMLElement, clone: HTMLElement) {
       const img = document.createElement("img");
       img.src = canvas.toDataURL("image/png");
       img.alt = "plot";
+      img.className = canvas.className || "plot";
       img.style.maxWidth = "100%";
       img.style.height = "auto";
+      img.style.display = "block";
       target.replaceWith(img);
     } catch {
       /* tainted canvas */
     }
   });
+}
+
+function parseLen(raw: string | null | undefined): number {
+  if (!raw) return 0;
+  const m = /^([\d.]+)\s*(px|pt|mm|cm|in)?$/i.exec(raw.trim());
+  if (!m) return 0;
+  const n = parseFloat(m[1]);
+  switch ((m[2] || "px").toLowerCase()) {
+    case "pt":
+      return (n * 96) / 72;
+    case "mm":
+      return n * MM;
+    case "cm":
+      return n * MM * 10;
+    case "in":
+      return n * 96;
+    default:
+      return n;
+  }
+}
+
+function styleLength(style: string, prop: "width" | "height"): number {
+  const m = new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, "i").exec(style);
+  return parseLen(m?.[1] ?? "");
+}
+
+function isElement(node: Node): node is HTMLElement {
+  return node.nodeType === Node.ELEMENT_NODE;
+}
+
+function graphicCssSize(el: Element) {
+  const style = el.getAttribute("style") ?? "";
+  let w = styleLength(style, "width");
+  let h = styleLength(style, "height");
+  if (!w || !h) {
+    const r = el.getBoundingClientRect();
+    w = w || r.width;
+    h = h || r.height;
+  }
+  if ((!w || !h) && el.tagName.toLowerCase() === "svg") {
+    const vb = (el.getAttribute("viewBox") || el.getAttribute("viewbox") || "")
+      .trim()
+      .split(/[\s,]+/)
+      .map(Number);
+    if (vb.length === 4 && vb[2] > 0 && vb[3] > 0) {
+      w = w || vb[2];
+      h = h || vb[3];
+    }
+  }
+  if (w > CONTENT_WIDTH_PX && w > 0) {
+    const s = CONTENT_WIDTH_PX / w;
+    w = CONTENT_WIDTH_PX;
+    h = h * s;
+  }
+  return { w: Math.max(1, w), h: Math.max(1, h) };
+}
+
+/**
+ * Calcpad SVGs ship with retina attributes (e.g. width="2350px") and a CSS
+ * size in pt. Browsers layout to the CSS size; html2canvas often paints the
+ * attribute size and overflows the page. Rasterize at the CSS size so the
+ * box we paginate is the box we paint.
+ */
+async function rasterizeSvg(svg: SVGSVGElement, doc: Document) {
+  const { w, h } = graphicCssSize(svg);
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  const vb =
+    clone.getAttribute("viewBox") ||
+    clone.getAttribute("viewbox") ||
+    `0 0 ${w} ${h}`;
+  clone.setAttribute("viewBox", vb);
+  clone.removeAttribute("viewbox");
+  clone.setAttribute("width", String(w));
+  clone.setAttribute("height", String(h));
+  clone.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  clone.style.width = `${w}px`;
+  clone.style.height = `${h}px`;
+  clone.style.maxWidth = "100%";
+  clone.style.overflow = "hidden";
+
+  const xml = new XMLSerializer().serializeToString(clone);
+  const href = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+  const probe = doc.createElement("img");
+  await new Promise<void>((resolve) => {
+    probe.onload = () => resolve();
+    probe.onerror = () => resolve();
+    probe.src = href;
+  });
+
+  const img = doc.createElement("img");
+  img.alt = "plot";
+  img.className = svg.getAttribute("class") || "plot";
+  img.style.cssText = `display:block;width:${w}px;height:${h}px;max-width:100%;`;
+
+  if (probe.naturalWidth) {
+    const scale = 2;
+    const canvas = doc.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(w * scale));
+    canvas.height = Math.max(1, Math.round(h * scale));
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(probe, 0, 0, canvas.width, canvas.height);
+      img.src = canvas.toDataURL("image/png");
+    } else {
+      img.src = href;
+    }
+  } else {
+    img.src = href;
+  }
+
+  await new Promise<void>((resolve) => {
+    if (img.complete && img.naturalWidth) {
+      resolve();
+      return;
+    }
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+  });
+  svg.replaceWith(img);
 }
 
 function wrapKeepTogether(root: HTMLElement) {
@@ -65,57 +202,92 @@ function wrapKeepTogether(root: HTMLElement) {
   });
 }
 
-function isElement(node: Node): node is HTMLElement {
-  return node.nodeType === Node.ELEMENT_NODE;
+function hasPageBreak(el: HTMLElement) {
+  const style = `${el.getAttribute("style") ?? ""};${el.style?.cssText ?? ""}`;
+  if (/break-after\s*:\s*page/i.test(style) || /page-break-after\s*:\s*always/i.test(style)) {
+    return true;
+  }
+  return [...el.querySelectorAll("[style]")].some((child) => {
+    const s = child.getAttribute("style") ?? "";
+    return /break-after\s*:\s*page/i.test(s) || /page-break-after\s*:\s*always/i.test(s);
+  });
 }
 
-function isKeep(node: Node): node is HTMLElement {
-  return isElement(node) && node.classList.contains("pdf-keep");
+function isBreakOnly(el: HTMLElement) {
+  if (!hasPageBreak(el)) return false;
+  const text = (el.textContent ?? "").replace(/\u00a0/g, " ").trim();
+  if (text) return false;
+  return !el.querySelector("img, svg, canvas, table, .pdf-keep");
 }
 
-function isBlock(node: Node): node is HTMLElement {
-  if (!isElement(node)) return false;
-  return /^(P|H1|H2|H3|H4|H5|H6|TABLE|UL|OL|PRE|BLOCKQUOTE|DIV|SECTION|ARTICLE|HR|DL)$/.test(
-    node.tagName,
-  );
+function isHeadingUnit(el: HTMLElement) {
+  if (HEADING_RE.test(el.tagName)) return true;
+  const first = el.firstElementChild as HTMLElement | null;
+  return !!first && HEADING_RE.test(first.tagName) && el.children.length === 1;
 }
 
-function heightOf(el: HTMLElement) {
-  return el.getBoundingClientRect().height;
+function makeUnit(doc: Document, nodes: Node[]) {
+  const unit = doc.createElement("div");
+  unit.className = "pdf-unit";
+  nodes.forEach((node) => unit.appendChild(node));
+  return unit;
 }
 
-function collectUnits(root: HTMLElement) {
+function collectUnits(root: HTMLElement): HTMLElement[] {
   const doc = root.ownerDocument;
   const units: HTMLElement[] = [];
-  const buffer: Node[] = [];
+  let buffer: Node[] = [];
 
   const flush = () => {
-    if (!buffer.length) return;
-    const unit = doc.createElement("div");
-    unit.className = "pdf-unit";
-    buffer.forEach((node) => unit.appendChild(node));
-    units.push(unit);
-    buffer.length = 0;
+    const meaningful = buffer.filter((node) => {
+      if (node.nodeType === Node.TEXT_NODE) return (node.textContent ?? "").trim().length > 0;
+      if (isElement(node) && node.tagName === "BR") return false;
+      return true;
+    });
+    if (!meaningful.length) {
+      buffer = [];
+      return;
+    }
+    units.push(makeUnit(doc, meaningful));
+    buffer = [];
   };
 
   for (const node of [...root.childNodes]) {
-    if (isKeep(node)) {
+    if (isElement(node) && node.classList.contains("pdf-keep")) {
       flush();
       units.push(node);
       continue;
     }
-    if (isBlock(node) && node.querySelector(".pdf-keep")) {
+    if (isElement(node) && node.tagName === "BR") {
       flush();
-      wrapKeepTogether(node);
-      for (const child of collectUnits(node)) units.push(child);
       continue;
     }
-    if (isBlock(node)) {
+    if (isElement(node) && BLOCK_RE.test(node.tagName)) {
       flush();
-      const unit = doc.createElement("div");
-      unit.className = "pdf-unit";
-      unit.appendChild(node);
-      units.push(unit);
+      if (node.querySelector(".pdf-keep, svg, img, canvas, table")) {
+        wrapKeepTogether(node);
+        const inner = collectUnits(node);
+        if (hasPageBreak(node) && inner.length) {
+          inner[inner.length - 1].dataset.breakAfter = "page";
+        }
+        if (isBreakOnly(node) && !inner.length) {
+          const brk = makeUnit(doc, []);
+          brk.dataset.breakAfter = "page";
+          brk.dataset.breakOnly = "1";
+          units.push(brk);
+        } else {
+          units.push(...inner);
+        }
+      } else if (isBreakOnly(node)) {
+        const brk = makeUnit(doc, []);
+        brk.dataset.breakAfter = "page";
+        brk.dataset.breakOnly = "1";
+        units.push(brk);
+      } else {
+        const unit = makeUnit(doc, [node]);
+        if (hasPageBreak(node)) unit.dataset.breakAfter = "page";
+        units.push(unit);
+      }
       continue;
     }
     buffer.push(node);
@@ -124,36 +296,41 @@ function collectUnits(root: HTMLElement) {
   return units;
 }
 
-function fitKeep(unit: HTMLElement, maxHeight: number) {
-  const graphic = unit.querySelector<HTMLElement>("svg, img, canvas, table, .js-plotly-plot");
-  const target = graphic ?? unit;
-  target.style.maxWidth = "100%";
-  target.style.maxHeight = `${maxHeight}px`;
-  target.style.height = "auto";
-  target.style.width = "auto";
-  target.style.display = "block";
-  if (heightOf(unit) <= maxHeight + 1) return;
-  const h = heightOf(unit);
-  const scale = Math.max(0.2, (maxHeight - 2) / h);
-  unit.style.transform = `scale(${scale})`;
-  unit.style.transformOrigin = "top left";
-  unit.style.height = `${h * scale}px`;
-  unit.style.overflow = "hidden";
+function scaleGraphicToFit(unit: HTMLElement, maxHeight: number) {
+  const g = unit.querySelector<HTMLElement>("img, svg, canvas");
+  if (!g) return;
+  const r = g.getBoundingClientRect();
+  const uh = unit.getBoundingClientRect().height || r.height;
+  if (uh <= maxHeight || uh <= 0) return;
+  const s = (maxHeight - 2) / uh;
+  if (s >= 1) return;
+  const w = Math.max(1, r.width * s);
+  const h = Math.max(1, r.height * s);
+  g.style.width = `${w}px`;
+  g.style.height = `${h}px`;
+  g.style.maxWidth = "100%";
+  g.style.display = "block";
 }
 
-function makePage(doc: Document) {
-  const page = doc.createElement("section");
-  page.className = "pdf-page";
-  const inner = doc.createElement("div");
-  inner.className = "pdf-page-inner";
-  page.appendChild(inner);
-  return { page, inner };
+function shrinkUntilFits(unit: HTMLElement, pack: HTMLElement) {
+  const g = unit.querySelector<HTMLElement>("img, svg, canvas");
+  if (!g) return;
+  let guard = 0;
+  while (packOverflows(pack) && guard++ < 8) {
+    const extra = pack.scrollHeight - pack.clientHeight + 2;
+    const r = g.getBoundingClientRect();
+    if (r.height <= extra + 24) break;
+    const nextH = r.height - extra;
+    const s = nextH / r.height;
+    g.style.width = `${Math.max(1, r.width * s)}px`;
+    g.style.height = `${Math.max(1, nextH)}px`;
+  }
 }
 
-function splitTallUnit(unit: HTMLElement, maxHeight: number) {
-  const table = unit.matches("table") ? unit : unit.querySelector(":scope > table, :scope > * > table");
-  if (!table || heightOf(unit) <= maxHeight + 1) return [unit];
+function splitTable(unit: HTMLElement, pack: HTMLElement, maxHeight: number): HTMLElement[] {
 
+  const table = unit.matches("table") ? (unit as HTMLTableElement) : unit.querySelector(":scope table");
+  if (!table) return [unit];
   const doc = unit.ownerDocument;
   const thead = table.querySelector("thead");
   const rowParent = table.querySelector("tbody") ?? table;
@@ -161,104 +338,215 @@ function splitTallUnit(unit: HTMLElement, maxHeight: number) {
   if (rows.length < 2) return [unit];
 
   const chunks: HTMLElement[] = [];
-  let currentTable: HTMLElement | null = null;
-  let currentWrap: HTMLElement | null = null;
-  let used = 0;
-
   const open = () => {
-    currentWrap = doc.createElement("div");
-    currentWrap.className = "pdf-unit";
-    currentTable = table.cloneNode(false) as HTMLElement;
-    if (thead) currentTable.appendChild(thead.cloneNode(true));
-    const body = table.querySelector("tbody") ? doc.createElement("tbody") : currentTable;
-    if (body !== currentTable) currentTable.appendChild(body);
-    currentWrap.appendChild(currentTable);
-    used = thead ? 24 : 0;
-    return body;
+    const wrap = doc.createElement("div");
+    wrap.className = "pdf-unit";
+    const next = table.cloneNode(false) as HTMLElement;
+    if (thead) next.appendChild(thead.cloneNode(true));
+    const body = table.querySelector("tbody") ? doc.createElement("tbody") : next;
+    if (body !== next) next.appendChild(body);
+    wrap.appendChild(next);
+    return { wrap, body };
   };
 
-  let body = open();
+  let { wrap, body } = open();
   for (const row of rows) {
     body.appendChild(row);
-    currentWrap!.style.position = "absolute";
-    currentWrap!.style.visibility = "hidden";
-    unit.parentElement?.appendChild(currentWrap!);
-    const h = heightOf(currentWrap!);
-    currentWrap!.style.position = "";
-    currentWrap!.style.visibility = "";
-    if (h > maxHeight && body.children.length > 1) {
+    pack.appendChild(wrap);
+    if (wrap.getBoundingClientRect().height > maxHeight && body.children.length > 1) {
       body.removeChild(row);
-      chunks.push(currentWrap!);
-      body = open();
+      wrap.remove();
+      chunks.push(wrap);
+      ({ wrap, body } = open());
       body.appendChild(row);
+      pack.appendChild(wrap);
     }
   }
-  if (currentWrap) chunks.push(currentWrap);
+  wrap.remove();
+  chunks.push(wrap);
   unit.remove();
   return chunks.length ? chunks : [unit];
 }
 
-function paginateUnits(root: HTMLElement, incoming: HTMLElement[]) {
-  const units: HTMLElement[] = [];
-  for (const unit of incoming) {
-    if (unit.classList.contains("pdf-keep")) {
-      units.push(unit);
-      continue;
-    }
-    root.appendChild(unit);
-    units.push(...splitTallUnit(unit, INNER_HEIGHT));
+function splitTallUnit(unit: HTMLElement, pack: HTMLElement, maxHeight: number): HTMLElement[] {
+  if (unit.classList.contains("pdf-keep")) return [unit];
+  if (unit.querySelector("table") || unit.matches("table")) {
+    pack.appendChild(unit);
+    const tall = unit.getBoundingClientRect().height > maxHeight;
+    unit.remove();
+    if (tall) return splitTable(unit, pack, maxHeight);
+    return [unit];
   }
+  const blocks = [...unit.children].filter(
+    (child): child is HTMLElement =>
+      isElement(child) && (BLOCK_RE.test(child.tagName) || child.classList.contains("pdf-keep")),
+  );
+  if (blocks.length > 1) {
+    const doc = unit.ownerDocument;
+    return blocks.map((child) => {
+      const wrap = doc.createElement("div");
+      wrap.className = child.classList.contains("pdf-keep") ? "pdf-keep" : "pdf-unit";
+      wrap.appendChild(child);
+      return wrap;
+    });
+  }
+  return [unit];
+}
 
-  const doc = root.ownerDocument;
-  const pages: HTMLElement[] = [];
-  let current = makePage(doc);
-  let used = 0;
-  root.appendChild(current.page);
+function packOverflows(pack: HTMLElement) {
+  return pack.scrollHeight > pack.clientHeight + 1;
+}
 
-  const startPage = () => {
-    pages.push(current.page);
-    current = makePage(doc);
-    root.appendChild(current.page);
-    used = 0;
+function packPages(units: HTMLElement[], pack: HTMLElement): HTMLElement[][] {
+  const pages: HTMLElement[][] = [];
+  let current: HTMLElement[] = [];
+
+  const commit = () => {
+    if (!current.length) return;
+    pages.push(current);
+    current = [];
+    pack.replaceChildren();
+  };
+
+  const accept = (unit: HTMLElement) => {
+    pack.appendChild(unit);
+    current.push(unit);
+  };
+
+  const fitOnEmptyPage = (unit: HTMLElement) => {
+    accept(unit);
+    if (!packOverflows(pack)) return;
+    pack.removeChild(unit);
+    current.pop();
+    const parts = splitTallUnit(unit, pack, pack.clientHeight);
+    if (parts.length === 1) {
+      accept(parts[0]);
+      scaleGraphicToFit(parts[0], pack.clientHeight);
+      shrinkUntilFits(parts[0], pack);
+      return;
+    }
+    for (const part of parts) {
+      if (!current.length) {
+        accept(part);
+        if (packOverflows(pack)) scaleGraphicToFit(part, pack.clientHeight);
+        continue;
+      }
+      pack.appendChild(part);
+      if (packOverflows(pack)) {
+        pack.removeChild(part);
+        commit();
+        accept(part);
+        if (packOverflows(pack)) scaleGraphicToFit(part, pack.clientHeight);
+      } else {
+        current.push(part);
+      }
+    }
   };
 
   for (const unit of units) {
-    current.inner.appendChild(unit);
-    if (unit.classList.contains("pdf-keep")) fitKeep(unit, INNER_HEIGHT);
-    const h = heightOf(unit);
-    if (used > 0 && used + h > INNER_HEIGHT) {
-      startPage();
-      current.inner.appendChild(unit);
-      if (unit.classList.contains("pdf-keep")) fitKeep(unit, INNER_HEIGHT);
-      used = heightOf(unit);
-    } else {
-      used += h;
+    if (unit.dataset.breakOnly === "1") {
+      commit();
+      continue;
     }
+
+    if (!current.length) {
+      fitOnEmptyPage(unit);
+    } else {
+      pack.appendChild(unit);
+      if (packOverflows(pack)) {
+        pack.removeChild(unit);
+        const moved: HTMLElement[] = [];
+        while (current.length && isHeadingUnit(current[current.length - 1])) {
+          moved.unshift(current.pop() as HTMLElement);
+        }
+        commit();
+        for (const heading of moved) accept(heading);
+        pack.appendChild(unit);
+        if (packOverflows(pack)) {
+          pack.removeChild(unit);
+          if (unit.classList.contains("pdf-keep") && current.length) {
+            accept(unit);
+            shrinkUntilFits(unit, pack);
+            if (packOverflows(pack)) {
+              pack.removeChild(unit);
+              current.pop();
+              commit();
+              fitOnEmptyPage(unit);
+            }
+          } else if (current.length) {
+            commit();
+            fitOnEmptyPage(unit);
+          } else {
+            fitOnEmptyPage(unit);
+          }
+        } else {
+          current.push(unit);
+        }
+      } else {
+        current.push(unit);
+      }
+    }
+
+    if (unit.dataset.breakAfter === "page") commit();
   }
-  pages.push(current.page);
+  commit();
   return pages;
 }
 
 const PRINT_CSS = `
-html, body { margin: 0; padding: 0; background: #ffffff; color: #111111; }
-body { font-family: 'Segoe UI', Helvetica, Arial, sans-serif; }
-.pdf-pages { width: ${A4_WIDTH_PX}px; background: #fff; color: #111; }
-.pdf-page {
-  width: ${A4_WIDTH_PX}px;
-  height: ${A4_HEIGHT_PX}px;
-  padding: ${PAGE_MARGIN_PX}px;
-  box-sizing: border-box;
-  background: #ffffff;
-  overflow: hidden;
-  page-break-after: always;
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: none !important;
+  width: ${CONTENT_WIDTH_MM}mm !important;
+  background: #ffffff !important;
+  color: #111111;
+  overflow: hidden !important;
 }
-.pdf-page-inner { width: ${INNER_WIDTH}px; }
-.pdf-keep, .pdf-unit { break-inside: avoid; page-break-inside: avoid; }
-.pdf-keep { max-width: 100%; }
-.pdf-keep svg, .pdf-keep img, .pdf-keep canvas, .pdf-keep table {
+body {
+  font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 150%;
+}
+.lineLink, .errorHeader, .no-print, .no-screen { display: none !important; }
+.value:after { display: none !important; }
+.fold { height: auto !important; overflow: visible !important; }
+.side { float: none !important; max-width: 100% !important; }
+.ref { float: right; }
+.pdf-measure {
+  width: ${CONTENT_WIDTH_MM}mm;
+  max-width: ${CONTENT_WIDTH_MM}mm;
+  background: #fff;
+  color: #111;
+}
+.pdf-pack {
+  box-sizing: border-box;
+  width: ${CONTENT_WIDTH_MM}mm;
+  max-width: ${CONTENT_WIDTH_MM}mm;
+  height: ${CONTENT_HEIGHT_MM}mm;
+  max-height: ${CONTENT_HEIGHT_MM}mm;
+  overflow: hidden;
+  background: #ffffff;
+  color: #111;
+}
+.pdf-keep, .pdf-unit {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.pdf-keep {
+  display: block;
+  overflow: hidden;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.pdf-keep img, .pdf-keep svg, .pdf-keep canvas, img.plot, svg.plot {
+  display: block;
   max-width: 100%;
   height: auto;
-  display: block;
+}
+.pdf-unit {
+  margin: 0;
+  padding: 0;
 }
 `;
 
@@ -281,24 +569,37 @@ export async function exportPdfReport(fileName: string, html: string, paper?: HT
     clone.className = "calcpad-paper";
     clone.removeAttribute("style");
     clone.querySelectorAll("script").forEach((s) => s.remove());
+    clone.querySelectorAll(".lineLink, .errorHeader").forEach((s) => s.remove());
+    clone.querySelectorAll(".fold").forEach((el) => {
+      el.classList.remove("fold");
+      el.classList.add("unfold");
+    });
     replaceCanvases(paper, clone);
     bodyHtml = clone.innerHTML;
   }
 
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
-  iframe.style.cssText =
-    "position:fixed;left:-16000px;top:0;width:" +
-    A4_WIDTH_PX +
-    "px;height:" +
-    A4_HEIGHT_PX +
-    "px;border:0;background:#fff;";
+  iframe.style.cssText = [
+    "position:fixed",
+    "left:0",
+    "top:0",
+    `width:${Math.ceil(CONTENT_WIDTH_PX + 8)}px`,
+    `height:${Math.ceil(CONTENT_HEIGHT_PX + 8)}px`,
+    "border:0",
+    "background:#fff",
+    "opacity:1",
+    "pointer-events:none",
+    "z-index:2147483647",
+  ].join(";");
   document.body.appendChild(iframe);
   const doc = iframe.contentDocument;
-  if (!doc) {
+  const win = iframe.contentWindow;
+  if (!doc || !win) {
     iframe.remove();
     throw new Error("Could not open PDF frame");
   }
+
   doc.open();
   doc.write(`<!DOCTYPE html>
 <html>
@@ -307,46 +608,97 @@ export async function exportPdfReport(fileName: string, html: string, paper?: HT
 <style>${css}\n${PRINT_CSS}</style>
 </head>
 <body>
-<div class="pdf-measure" style="width:${INNER_WIDTH}px;background:#fff;color:#111;"></div>
-<div class="pdf-pages"></div>
+<div class="pdf-measure"></div>
+<div class="pdf-pack"></div>
 </body>
 </html>`);
   doc.close();
 
   const measure = doc.querySelector<HTMLElement>(".pdf-measure");
-  const pagesRoot = doc.querySelector<HTMLElement>(".pdf-pages");
-  if (!measure || !pagesRoot) {
+  const pack = doc.querySelector<HTMLElement>(".pdf-pack");
+  if (!measure || !pack) {
     iframe.remove();
     throw new Error("PDF frame is missing layout roots");
   }
+
   measure.innerHTML = bodyHtml;
   wrapKeepTogether(measure);
   await waitForImages(measure);
+  for (const svg of [...measure.querySelectorAll("svg")]) {
+    try {
+      await rasterizeSvg(svg as SVGSVGElement, doc);
+    } catch {
+      const { w, h } = graphicCssSize(svg);
+      svg.setAttribute("width", String(w));
+      svg.setAttribute("height", String(h));
+      (svg as SVGElement).style.width = `${w}px`;
+      (svg as SVGElement).style.height = `${h}px`;
+    }
+  }
+  await waitForImages(measure);
+  try {
+    await doc.fonts.ready;
+  } catch {
+    /* ignore */
+  }
+  await new Promise((r) => win.requestAnimationFrame(() => r(null)));
 
   const units = collectUnits(measure);
-  const pages = paginateUnits(pagesRoot, units);
-  iframe.style.height = `${Math.max(A4_HEIGHT_PX, pages.length * A4_HEIGHT_PX)}px`;
-  await waitForImages(pagesRoot);
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  measure.remove();
+  pack.replaceChildren();
+  const pages = packPages(units, pack);
 
   try {
-    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const pdf = new jsPDF({
+      unit: "mm",
+      format: "a4",
+      orientation: "portrait",
+      compress: true,
+    });
     const title = reportTitle(fileName);
     pdf.setProperties({ title: `${title} — CalcpadCE`, creator: "CalcpadCE WebAssembly" });
 
+    if (!pages.length) {
+      pdf.save(`${title}.pdf`);
+      return;
+    }
+
     for (let i = 0; i < pages.length; i++) {
-      const canvas = await html2canvas(pages[i], {
+      pack.replaceChildren();
+      for (const unit of pages[i]) pack.appendChild(unit);
+      await waitForImages(pack);
+      await new Promise((r) => win.requestAnimationFrame(() => r(null)));
+
+      const width = pack.offsetWidth || Math.round(CONTENT_WIDTH_PX);
+      const height = pack.offsetHeight || Math.round(CONTENT_HEIGHT_PX);
+      const canvas = await html2canvas(pack, {
         scale: 2,
         backgroundColor: "#ffffff",
         useCORS: true,
         logging: false,
-        width: A4_WIDTH_PX,
-        height: A4_HEIGHT_PX,
-        windowWidth: A4_WIDTH_PX,
-        windowHeight: A4_HEIGHT_PX,
+        scrollX: 0,
+        scrollY: 0,
+        x: 0,
+        y: 0,
+        width,
+        height,
+        windowWidth: width,
+        windowHeight: height,
       });
-      if (i > 0) pdf.addPage();
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.93), "JPEG", 0, 0, 210, 297);
+
+      if (i > 0) pdf.addPage("a4", "p");
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, PAGE_WIDTH_MM, PAGE_HEIGHT_MM, "F");
+      pdf.addImage(
+        canvas,
+        "PNG",
+        MARGIN_LEFT_MM,
+        MARGIN_TOP_MM,
+        CONTENT_WIDTH_MM,
+        CONTENT_HEIGHT_MM,
+        undefined,
+        "FAST",
+      );
     }
     pdf.save(`${title}.pdf`);
   } finally {
