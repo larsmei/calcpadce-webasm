@@ -89,8 +89,17 @@ namespace Calcpad.Core
                 GetSvgPoints(charts, x0, y0, xs, ys);
                 return DrawSvg(charts, x0, y0, xs, ys, limits, fileName);
             }
-            GetPngPoints(charts, x0, y0, xs, ys);
-            return DrawPng(charts, x0, y0, xs, ys, limits, fileName);
+            try
+            {
+                GetPngPoints(charts, x0, y0, xs, ys);
+                return DrawPng(charts, x0, y0, xs, ys, limits, fileName);
+            }
+            catch (Exception ex) when (
+                ex is TypeInitializationException or DllNotFoundException or EntryPointNotFoundException)
+            {
+                GetSvgPoints(charts, x0, y0, xs, ys);
+                return DrawSvg(charts, x0, y0, xs, ys, limits, fileName);
+            }
         }
 
         private static Box FixLimits(Box limits)

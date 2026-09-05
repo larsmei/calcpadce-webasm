@@ -349,7 +349,7 @@ namespace Calcpad.Core
                 using var fs = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);
                 using var wstream = new SKManagedWStream(fs);
                 using var pixmap = bitmap.PeekPixels();
-                pixmap.Encode(wstream, _pngEncoderOptions);
+                pixmap.Encode(wstream, PngEncoderOptions());
             }
             catch
             {
@@ -373,7 +373,9 @@ namespace Calcpad.Core
             }
         }
 
-        private static SKPngEncoderOptions _pngEncoderOptions = new(SKPngEncoderFilterFlags.None, 4);
+        private static SKPngEncoderOptions PngEncoderOptions() =>
+            new(SKPngEncoderFilterFlags.None, 4);
+
         protected static string ImageToBase64(SKBitmap bitmap)
         {
             try
@@ -381,7 +383,7 @@ namespace Calcpad.Core
                 using var ms = new MemoryStream();
                 using var wstream = new SKManagedWStream(ms);
                 using var pixmap = bitmap.PeekPixels();
-                pixmap.Encode(wstream, _pngEncoderOptions);
+                pixmap.Encode(wstream, PngEncoderOptions());
                 wstream.Flush();
                 var imageBytes = ms.ToArray();
                 var b64Str = Convert.ToBase64String(imageBytes);

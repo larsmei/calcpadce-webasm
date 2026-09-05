@@ -16,7 +16,6 @@ namespace Calcpad.Core
         {
             internal readonly Node[,] Points;
             internal readonly Node[,] Vertices;
-            private readonly SKPoint[,] _pngPoints;
             private readonly SvgPoint[,] _svgPoints;
             private readonly int _nx;
             private readonly int _ny;
@@ -28,7 +27,6 @@ namespace Calcpad.Core
                 Vertices = new Node[points.GetLength(0), points.GetLength(1)];
                 _nx = points.GetLength(0);
                 _ny = points.GetLength(1);
-                _pngPoints = new SKPoint[_nx, _ny];
                 _svgPoints = new SvgPoint[_nx, _ny];
                 Min = double.MaxValue;
                 Max = double.MinValue;
@@ -93,9 +91,6 @@ namespace Calcpad.Core
 
             internal void GetPngPoints(double x0, double y0, double xs, double ys)
             {
-                for (int i = 0; i < _nx; ++i)
-                    for (int j = 0; j < _ny; ++j)
-                        _pngPoints[i, j] = new SKPoint((float)(x0 + Points[i, j].X * xs), (float)(y0 - Points[i, j].Y * ys));
             }
 
             internal void GetSvgPoints(double x0, double y0, double xs, double ys)
@@ -153,13 +148,22 @@ namespace Calcpad.Core
             var fileName = isFIle ?
                 Path.ChangeExtension(Path.GetRandomFileName(), ext) :
                 null;
-            if (isVector)
+            try
+            {
+                if (isVector)
+                {
+                    m.GetSvgPoints(x0, y0, xs, ys);
+                    return DrawSvg(m, x0, y0, xs, ys, bounds, fileName);
+                }
+                m.GetPngPoints(x0, y0, xs, ys);
+                return DrawPng(m, x0, y0, xs, ys, bounds, fileName);
+            }
+            catch (Exception ex) when (
+                ex is TypeInitializationException or DllNotFoundException or EntryPointNotFoundException)
             {
                 m.GetSvgPoints(x0, y0, xs, ys);
                 return DrawSvg(m, x0, y0, xs, ys, bounds, fileName);
             }
-            m.GetPngPoints(x0, y0, xs, ys);
-            return DrawPng(m, x0, y0, xs, ys, bounds, fileName);
         }
 
         private Node[,] Calculate(Func<IValue> function, Variable varX, Variable varY, double startX, double endX, double startY, double endY, Unit xUnits, Unit yUnits)
@@ -601,13 +605,7 @@ namespace Calcpad.Core
             var values = Interpolate(m);
             var w = values.GetLength(0) - 1;
             var h = values.GetLength(1) - 1;
-            string src;
-            using (var bitmap = new SKBitmap(w, h))
-            {
-                var gcHandle = SetBitmapBits(bitmap, values);
-                src = ImageToBase64(bitmap);
-                gcHandle.Free();
-            }
+            var src = RawPng.ToDataUri(RenderHeatmapRgba(values, w, h), w, h);
             g.DrawImage(Left, Margin, w, h, src);
             DrawGridSvg(g, x0, y0, xs, ys, bounds);
             DrawColorScaleSvg(g, m);
@@ -621,6 +619,73 @@ namespace Calcpad.Core
             }
             SvgToFile(g, Settings.ImagePath, fileName);
             return HtmlImg(Settings.ImageUri + fileName);
+        }
+
+        private byte[] RenderHeatmapRgba(double[,,] values, int w, int h)
+        {
+            Node light = new(), spec = new();
+            double length, ks = 0.5;
+            if (Settings.Shadows)
+            {
+                const double sqr2 = 0.70710678118654752440084436210485;
+                const double sqr3 = 0.57735026918962576450914878050196;
+                if (Settings.ColorScale <= PlotSettings.ColorScales.Terrain)
+                    ks = 0.7;
+
+                switch (Settings.LightDirection)
+                {
+                    case PlotSettings.LightDirections.North: light = new(0, sqr2, sqr2); break;
+                    case PlotSettings.LightDirections.East: light = new(sqr2, 0, sqr2); break;
+                    case PlotSettings.LightDirections.South: light = new(0, -sqr2, sqr2); break;
+                    case PlotSettings.LightDirections.West: light = new(-sqr2, 0, sqr2); break;
+                    case PlotSettings.LightDirections.NorthEast: light = new(sqr3, sqr3, sqr3); break;
+                    case PlotSettings.LightDirections.SouthEast: light = new(sqr3, -sqr3, sqr3); break;
+                    case PlotSettings.LightDirections.SouthWest: light = new(-sqr3, -sqr3, sqr3); break;
+                    case PlotSettings.LightDirections.NorthWest: light = new(-sqr3, sqr3, sqr3); break;
+                }
+                var z = light.Z + 1d;
+                length = Math.Sqrt(light.X * light.X + light.Y * light.Y + z * z);
+                spec = new(light.X / length, light.Y / length, z / length);
+            }
+
+            var nx = values.GetLength(0) - 1;
+            var ny = values.GetLength(1) - 1;
+            var bytes = new byte[4 * w * h];
+            var pw = Math.Min(w, nx);
+            var ph = Math.Min(h, ny);
+            for (int i = 0; i < ph; ++i)
+            {
+                for (int j = 0; j < pw; ++j)
+                {
+                    var n1 = ny - i - 1;
+                    var d = values[j, n1, 0];
+                    if (double.IsInfinity(d) || double.IsNaN(d))
+                        continue;
+                    double p = 0.0, s = 0.0;
+                    if (Settings.Shadows)
+                    {
+                        var x = values[j, n1, 1];
+                        var y = values[j, n1, 2];
+                        length = Math.Sqrt(x * x + y * y + 1d);
+                        p = (x * light.X + y * light.Y + light.Z) / length;
+                        if (Settings.ColorScale > PlotSettings.ColorScales.Gray)
+                        {
+                            length = (x * spec.X + y * spec.Y + spec.Z) / length;
+                            if (Math.Abs(length) > 0.98)
+                                s = Math.Pow(length, 200d) * ks;
+                        }
+                    }
+                    if (p < 0d)
+                        p = 0d;
+                    GetColor(out var red, out var green, out var blue, d, p);
+                    var jStr = 4 * (i * w + j);
+                    bytes[jStr] = (byte)(red + (255 - red) * s);
+                    bytes[jStr + 1] = (byte)(green + (255 - green) * s);
+                    bytes[jStr + 2] = (byte)(blue + (255 - blue) * s);
+                    bytes[jStr + 3] = 255;
+                }
+            }
+            return bytes;
         }
     }
 }

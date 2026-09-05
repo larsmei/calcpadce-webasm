@@ -3,25 +3,25 @@
 @import "./styles-calcpad-paper.css";
 
 @theme {
-  --color-background: #0c0e10;
-  --color-foreground: #e7ece9;
-  --color-elevated: #14181b;
-  --color-muted: #1b2124;
-  --color-muted-foreground: #8b9691;
-  --color-border: color-mix(in oklab, #e7ece9 12%, transparent);
-  --color-primary: #1c8a78;
-  --color-primary-foreground: #f4efe6;
-  --color-secondary: #1b2124;
-  --color-secondary-foreground: #e7ece9;
-  --color-destructive: #c45c4a;
-  --color-ring: #2ea58f;
-  --color-paper: #f4efe6;
-  --color-paper-ink: #1c1a16;
+  --color-background: oklch(98.5% 0 0);
+  --color-foreground: oklch(21% 0.03 265);
+  --color-elevated: oklch(100% 0 0);
+  --color-muted: oklch(96% 0.005 260);
+  --color-muted-foreground: oklch(55% 0.02 264);
+  --color-border: oklch(87% 0.01 258);
+  --color-primary: #006db0;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: oklch(96% 0.005 260);
+  --color-secondary-foreground: oklch(21% 0.03 265);
+  --color-destructive: oklch(44% 0.16 27);
+  --color-ring: #23a9f2;
+  --color-paper: #ffffff;
+  --color-paper-ink: oklch(21% 0.03 265);
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --motion-quick: 150ms;
@@ -53,7 +53,7 @@
   max-width: none !important;
   color: var(--color-paper-ink);
   background: var(--color-paper);
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: "Segoe UI", system-ui, sans-serif;
 }
 
 .calcpad-paper img,

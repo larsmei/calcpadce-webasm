@@ -9,18 +9,18 @@ import { tags } from "@lezer/highlight";
 import { calcpadLanguage, CALCPAD_COMPLETIONS } from "@/lib/calcpad/language";
 
 const highlight = HighlightStyle.define([
-  { tag: tags.comment, color: "#6f7c76", fontStyle: "italic" },
-  { tag: tags.keyword, color: "#7ec8b8" },
-  { tag: tags.atom, color: "#d4b483" },
-  { tag: tags.number, color: "#c9d4ce" },
-  { tag: tags.bool, color: "#c9d4ce" },
-  { tag: tags.operator, color: "#9aa8a2" },
-  { tag: tags.variableName, color: "#d7e4de" },
-  { tag: tags.function(tags.variableName), color: "#8ec4ff" },
-  { tag: tags.definition(tags.variableName), color: "#e8ece9" },
-  { tag: tags.meta, color: "#8fb9ae" },
-  { tag: tags.bracket, color: "#7d8a85" },
-  { tag: tags.literal, color: "#d4b483" },
+  { tag: tags.comment, color: "#6b7280", fontStyle: "italic" },
+  { tag: tags.keyword, color: "#006db0" },
+  { tag: tags.atom, color: "#b45309" },
+  { tag: tags.number, color: "#1d4ed8" },
+  { tag: tags.bool, color: "#1d4ed8" },
+  { tag: tags.operator, color: "#4b5563" },
+  { tag: tags.variableName, color: "#1e293b" },
+  { tag: tags.function(tags.variableName), color: "#0369a1" },
+  { tag: tags.definition(tags.variableName), color: "#0f172a" },
+  { tag: tags.meta, color: "#0f766e" },
+  { tag: tags.bracket, color: "#64748b" },
+  { tag: tags.literal, color: "#b45309" },
 ]);
 
 function completions(context: CompletionContext) {
@@ -42,35 +42,35 @@ const theme = EditorView.theme(
       height: "100%",
       fontSize: "13.5px",
       backgroundColor: "transparent",
-      color: "#e7ece9",
+      color: "#1e293b",
     },
     ".cm-scroller": {
       fontFamily: "var(--font-mono)",
       lineHeight: "1.55",
       overflow: "auto",
     },
-    ".cm-content": { caretColor: "#1c8a78", padding: "12px 0 48px" },
+    ".cm-content": { caretColor: "#006db0", padding: "12px 0 48px" },
     ".cm-gutters": {
       backgroundColor: "transparent",
-      color: "#5c6662",
+      color: "#94a3b8",
       border: "none",
     },
-    ".cm-activeLine": { backgroundColor: "rgba(255,255,255,0.035)" },
-    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "#9aa8a2" },
+    ".cm-activeLine": { backgroundColor: "rgba(0,109,176,0.06)" },
+    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "#006db0" },
     ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
-      backgroundColor: "rgba(28,138,120,0.28) !important",
+      backgroundColor: "rgba(0,109,176,0.18) !important",
     },
-    ".cm-cursor": { borderLeftColor: "#2ea58f" },
+    ".cm-cursor": { borderLeftColor: "#006db0" },
     ".cm-tooltip": {
-      backgroundColor: "#161b1e",
-      border: "1px solid rgba(231,236,233,0.12)",
-      color: "#e7ece9",
+      backgroundColor: "#ffffff",
+      border: "1px solid #d8dde4",
+      color: "#1e293b",
     },
     ".cm-tooltip-autocomplete ul li[aria-selected]": {
-      backgroundColor: "rgba(28,138,120,0.22)",
+      backgroundColor: "rgba(0,109,176,0.12)",
     },
   },
-  { dark: true },
+  { dark: false },
 );
 
 type Props = {
