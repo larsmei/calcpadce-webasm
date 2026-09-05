@@ -9,18 +9,19 @@ import { tags } from "@lezer/highlight";
 import { calcpadLanguage, CALCPAD_COMPLETIONS } from "@/lib/calcpad/language";
 
 const highlight = HighlightStyle.define([
-  { tag: tags.comment, color: "#6b7280", fontStyle: "italic" },
-  { tag: tags.keyword, color: "#006db0" },
-  { tag: tags.atom, color: "#b45309" },
-  { tag: tags.number, color: "#1d4ed8" },
-  { tag: tags.bool, color: "#1d4ed8" },
-  { tag: tags.operator, color: "#4b5563" },
-  { tag: tags.variableName, color: "#1e293b" },
-  { tag: tags.function(tags.variableName), color: "#0369a1" },
-  { tag: tags.definition(tags.variableName), color: "#0f172a" },
-  { tag: tags.meta, color: "#0f766e" },
-  { tag: tags.bracket, color: "#64748b" },
-  { tag: tags.literal, color: "#b45309" },
+  { tag: tags.comment, color: "#008000" },
+  { tag: tags.keyword, color: "#ff00ff" },
+  { tag: tags.atom, color: "#ff00ff" },
+  { tag: tags.standard(tags.name), color: "#ff00ff" },
+  { tag: tags.number, color: "#0000ff" },
+  { tag: tags.bool, color: "#0000ff" },
+  { tag: tags.unit, color: "#0000ff" },
+  { tag: tags.literal, color: "#ff0000" },
+  { tag: tags.operator, color: "#000000" },
+  { tag: tags.variableName, color: "#000000" },
+  { tag: tags.function(tags.variableName), color: "#ff00ff" },
+  { tag: tags.meta, color: "#ff00ff" },
+  { tag: tags.bracket, color: "#000000" },
 ]);
 
 function completions(context: CompletionContext) {
