@@ -3,6 +3,7 @@ import { Decoration, EditorView, WidgetType, type DecorationSet } from "@codemir
 import { findWorksheetImageRanges, imageKindLabel, type WorksheetImageRange } from "./paste-image";
 
 export const toggleImageFold = StateEffect.define<number>();
+export const IMAGE_SIZE_EVENT = "calcpad-image-size";
 
 function chevron(expanded: boolean) {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -22,8 +23,29 @@ function chevron(expanded: boolean) {
   return svg;
 }
 
+function resizeIcon() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("width", "14");
+  svg.setAttribute("height", "14");
+  svg.setAttribute("aria-hidden", "true");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute(
+    "d",
+    "M3 8 V3 h5 M13 8 V3 h-5 M3 8 v5 h5 M13 8 v5 h-5",
+  );
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "currentColor");
+  path.setAttribute("stroke-width", "1.5");
+  path.setAttribute("stroke-linecap", "round");
+  path.setAttribute("stroke-linejoin", "round");
+  svg.appendChild(path);
+  return svg;
+}
+
 function bindToggle(el: HTMLElement, view: EditorView, from: number) {
   const go = (event: Event) => {
+    if ((event.target as HTMLElement | null)?.closest?.(".cm-image-fold-resize")) return;
     event.preventDefault();
     event.stopPropagation();
     view.dispatch({ effects: toggleImageFold.of(from) });
@@ -38,6 +60,21 @@ function bindToggle(el: HTMLElement, view: EditorView, from: number) {
   });
 }
 
+function bindResize(el: HTMLElement, view: EditorView, from: number) {
+  const go = (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    view.dom.dispatchEvent(
+      new CustomEvent(IMAGE_SIZE_EVENT, { bubbles: true, detail: { from } }),
+    );
+  };
+  el.addEventListener("mousedown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  el.addEventListener("click", go);
+}
+
 class ImageFoldWidget extends WidgetType {
   constructor(readonly range: WorksheetImageRange) {
     super();
@@ -49,14 +86,16 @@ class ImageFoldWidget extends WidgetType {
       this.range.to === other.range.to &&
       this.range.dataUri === other.range.dataUri &&
       this.range.alt === other.range.alt &&
+      this.range.style === other.range.style &&
       this.range.lineCount === other.range.lineCount
     );
   }
 
   toDOM(view: EditorView) {
-    const { alt, dataUri, mime, lineCount, from } = this.range;
+    const { alt, dataUri, mime, lineCount, from, width, height } = this.range;
     const kind = imageKindLabel(mime);
     const lines = lineCount === 1 ? "1 line" : `${lineCount} lines`;
+    const dims = width && height ? `${width} × ${height} · ` : "";
     const wrap = document.createElement("div");
     wrap.className = "cm-image-fold";
     wrap.tabIndex = 0;
@@ -77,10 +116,18 @@ class ImageFoldWidget extends WidgetType {
     title.textContent = alt;
     const meta = document.createElement("div");
     meta.className = "cm-image-fold-meta";
-    meta.textContent = `${kind} · ${lines}`;
+    meta.textContent = `${kind} · ${dims}${lines}`;
     text.append(title, meta);
 
-    wrap.append(thumb, text, chevron(false));
+    const resize = document.createElement("button");
+    resize.type = "button";
+    resize.className = "cm-image-fold-resize";
+    resize.title = "Change display size";
+    resize.setAttribute("aria-label", `Change size of ${alt}`);
+    resize.append(resizeIcon());
+    bindResize(resize, view, from);
+
+    wrap.append(thumb, text, resize, chevron(false));
     bindToggle(wrap, view, from);
     return wrap;
   }
@@ -120,7 +167,16 @@ class ImageUnfoldWidget extends WidgetType {
     wrap.title = "Click to hide source";
     const label = document.createElement("span");
     label.textContent = `Collapse ${this.alt}`;
-    wrap.append(chevron(true), label);
+
+    const resize = document.createElement("button");
+    resize.type = "button";
+    resize.className = "cm-image-fold-resize";
+    resize.title = "Change display size";
+    resize.setAttribute("aria-label", `Change size of ${this.alt}`);
+    resize.append(resizeIcon());
+    bindResize(resize, view, this.from);
+
+    wrap.append(chevron(true), label, resize);
     bindToggle(wrap, view, this.from);
     return wrap;
   }
@@ -204,10 +260,10 @@ const imageFoldTheme = EditorView.theme({
   ".cm-image-fold, .cm-image-unfold": {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: "8px",
     boxSizing: "border-box",
     width: "calc(100% - 12px)",
-    maxWidth: "28rem",
+    maxWidth: "32rem",
     margin: "4px 8px 4px 2px",
     border: "1px solid #c5ddc5",
     background: "#f3f8f3",
@@ -218,12 +274,12 @@ const imageFoldTheme = EditorView.theme({
   },
   ".cm-image-fold": {
     minHeight: "44px",
-    padding: "6px 10px",
+    padding: "6px 8px 6px 10px",
     borderRadius: "6px",
   },
   ".cm-image-unfold": {
     minHeight: "28px",
-    padding: "4px 10px",
+    padding: "4px 8px 4px 10px",
     borderRadius: "6px 6px 0 0",
     marginBottom: "0",
     borderBottom: "none",
@@ -264,6 +320,24 @@ const imageFoldTheme = EditorView.theme({
   ".cm-image-fold-chevron": {
     flex: "none",
     opacity: "0.7",
+  },
+  ".cm-image-fold-resize": {
+    display: "grid",
+    placeItems: "center",
+    flex: "none",
+    width: "28px",
+    height: "28px",
+    margin: "0",
+    padding: "0",
+    border: "1px solid #c5ddc5",
+    borderRadius: "5px",
+    background: "#ffffff",
+    color: "#215c21",
+    cursor: "pointer",
+  },
+  ".cm-image-fold-resize:hover": {
+    background: "#dcecdc",
+    borderColor: "#8fbf8f",
   },
 });
 

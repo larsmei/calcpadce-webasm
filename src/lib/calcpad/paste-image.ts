@@ -3,12 +3,18 @@
 export const IMAGE_LINE_WIDTH = 96;
 export const MAX_IMAGE_SIDE = 1600;
 const PNG_SIZE_LIMIT = 1_200_000;
+const MAX_DISPLAY_SIDE = 8000;
 
 const IMAGE_TYPE = /^image\/(png|jpe?g|gif|webp|bmp|svg\+xml)$/i;
 const IMG_LINE = /^['"]<img\b/i;
 const DATA_SRC = /src\s*=\s*["'](data:image\/[^"']+)["']/i;
 const ALT_ATTR = /alt\s*=\s*["']([^"']*)["']/i;
+const STYLE_ATTR = /style\s*=\s*["']([^"']*)["']/i;
 const DATA_MIME = /^data:(image\/[a-z0-9.+-]+)/i;
+const WIDTH_PX = /(?:^|;)\s*width\s*:\s*(\d+(?:\.\d+)?)px/i;
+const HEIGHT_PX = /(?:^|;)\s*height\s*:\s*(\d+(?:\.\d+)?)px/i;
+
+export type ImageDisplaySize = { width: number; height: number };
 
 export function continueLongLine(text: string, width = IMAGE_LINE_WIDTH): string {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
@@ -44,10 +50,67 @@ export function joinContinuedLines(source: string): string {
   return out.join("\n");
 }
 
-export function worksheetImageComment(dataUri: string, alt = "screenshot"): string {
+export function clampDisplayDim(n: number) {
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(MAX_DISPLAY_SIDE, Math.round(n));
+}
+
+export function imageDisplayStyle(width: number, height: number): string {
+  const w = clampDisplayDim(width);
+  const h = clampDisplayDim(height);
+  return `width:${w}px;height:${h}px;max-width:100%;aspect-ratio:${w}/${h};display:block`;
+}
+
+export function parseImageDisplaySize(style: string | undefined | null): ImageDisplaySize | null {
+  if (!style) return null;
+  const w = WIDTH_PX.exec(style);
+  if (!w) return null;
+  const width = clampDisplayDim(Number(w[1]));
+  const h = HEIGHT_PX.exec(style);
+  const height = h ? clampDisplayDim(Number(h[1])) : 0;
+  return { width, height };
+}
+
+export function sizeFromWidth(width: number, naturalW: number, naturalH: number): ImageDisplaySize {
+  const nw = Math.max(1, naturalW);
+  const nh = Math.max(1, naturalH);
+  const w = clampDisplayDim(width);
+  return { width: w, height: clampDisplayDim(w * (nh / nw)) };
+}
+
+export function sizeFromHeight(height: number, naturalW: number, naturalH: number): ImageDisplaySize {
+  const nw = Math.max(1, naturalW);
+  const nh = Math.max(1, naturalH);
+  const h = clampDisplayDim(height);
+  return { width: clampDisplayDim(h * (nw / nh)), height: h };
+}
+
+export function worksheetImageComment(
+  dataUri: string,
+  alt = "screenshot",
+  size?: ImageDisplaySize,
+): string {
   const safeAlt = alt.replace(/["<>\n]/g, " ").trim() || "screenshot";
-  const html = `'<img class="worksheet-image" src="${dataUri}" alt="${safeAlt}" style="max-width:100%;height:auto;display:block">`;
+  const style = size
+    ? imageDisplayStyle(size.width, size.height)
+    : "max-width:100%;height:auto;display:block";
+  const html = `'<img class="worksheet-image" style="${style}" alt="${safeAlt}" src="${dataUri}">`;
   return continueLongLine(html);
+}
+
+export function rewriteWorksheetImageStyle(
+  source: string,
+  range: WorksheetImageRange,
+  size: ImageDisplaySize,
+): string {
+  const original = source.slice(range.from, range.to);
+  const trailingNl = original.endsWith("\n");
+  const joined = joinContinuedLines(original.replace(/\s+$/g, ""));
+  const style = imageDisplayStyle(size.width, size.height);
+  const next = STYLE_ATTR.test(joined)
+    ? joined.replace(STYLE_ATTR, `style="${style}"`)
+    : joined.replace(/<img\b/i, `<img style="${style}"`);
+  return source.slice(0, range.from) + continueLongLine(next) + (trailingNl ? "\n" : "") + source.slice(range.to);
 }
 
 /** Split the current line so the image sits on its own lines at `from`/`to`. */
@@ -92,6 +155,9 @@ export type WorksheetImageRange = {
   dataUri: string;
   alt: string;
   mime: string;
+  style: string;
+  width: number | null;
+  height: number | null;
   lineCount: number;
 };
 
@@ -132,7 +198,19 @@ export function findWorksheetImageRanges(source: string): WorksheetImageRange[] 
         if (to < n && source[to] === "\n") to += 1;
         const alt = ALT_ATTR.exec(joined)?.[1]?.trim() || "screenshot";
         const mime = DATA_MIME.exec(srcMatch[1])?.[1] ?? "image";
-        ranges.push({ from: lineFrom, to, dataUri: srcMatch[1], alt, mime, lineCount });
+        const style = STYLE_ATTR.exec(joined)?.[1] ?? "";
+        const size = parseImageDisplaySize(style);
+        ranges.push({
+          from: lineFrom,
+          to,
+          dataUri: srcMatch[1],
+          alt,
+          mime,
+          style,
+          width: size?.width ?? null,
+          height: size?.height ?? null,
+          lineCount,
+        });
       }
     }
     if (i < n && source[i] === "\n") i += 1;
@@ -144,7 +222,9 @@ const IMG_PLACEHOLDER_SRC = /src\s*=\s*(["'])cid:cpd-img-(\d+)\1/gi;
 
 /** Swap bulky data-URI screenshots for short cid: placeholders before WASM parse. */
 export function detachInlineImages(source: string): { source: string; images: string[] } {
-  if (!source.includes("data:image/")) return { source, images: [] };
+  // Do not probe for the contiguous "data:image/" substring — Calcpad ` _` wrapping
+  // can split it across lines (`src="d _\nata:image/...`). Range scan joins first.
+  if (!source.includes("<img")) return { source, images: [] };
   const ranges = findWorksheetImageRanges(source);
   if (!ranges.length) return { source, images: [] };
   const images: string[] = [];
@@ -155,7 +235,9 @@ export function detachInlineImages(source: string): { source: string; images: st
     const i = images.length;
     images.push(range.dataUri);
     const alt = range.alt.replace(/["<>\n]/g, " ").trim() || "screenshot";
-    const line = `'<img class="worksheet-image" src="cid:cpd-img-${i}" alt="${alt}">\n`;
+    const style = range.style.replace(/"/g, "").trim();
+    const styleAttr = style ? ` style="${style}"` : "";
+    const line = `'<img class="worksheet-image" src="cid:cpd-img-${i}" alt="${alt}"${styleAttr}>\n`;
     const extra = Math.max(0, range.lineCount - 1);
     out += extra ? line + "'\n".repeat(extra) : line;
     last = range.to;
@@ -181,9 +263,24 @@ function blobToDataUri(blob: Blob): Promise<string> {
   });
 }
 
-async function rasterToDataUri(blob: Blob): Promise<string> {
+function naturalSizeFromDataUri(dataUri: string): Promise<ImageDisplaySize> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve({
+        width: Math.max(1, img.naturalWidth || img.width || 1),
+        height: Math.max(1, img.naturalHeight || img.height || 1),
+      });
+    };
+    img.onerror = () => reject(new Error("Could not read image size"));
+    img.src = dataUri;
+  });
+}
+
+async function rasterToDataUri(blob: Blob): Promise<{ dataUri: string; width: number; height: number }> {
   if (typeof createImageBitmap !== "function" || typeof document === "undefined") {
-    return blobToDataUri(blob);
+    const dataUri = await blobToDataUri(blob);
+    return { dataUri, width: 1, height: 1 };
   }
   const bitmap = await createImageBitmap(blob);
   try {
@@ -194,23 +291,59 @@ async function rasterToDataUri(blob: Blob): Promise<string> {
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return blobToDataUri(blob);
+    if (!ctx) {
+      const dataUri = await blobToDataUri(blob);
+      return { dataUri, width: bitmap.width, height: bitmap.height };
+    }
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, w, h);
     ctx.drawImage(bitmap, 0, 0, w, h);
     const png = canvas.toDataURL("image/png");
-    if (png.startsWith("data:image/png") && png.length <= PNG_SIZE_LIMIT) return png;
+    if (png.startsWith("data:image/png") && png.length <= PNG_SIZE_LIMIT) {
+      return { dataUri: png, width: w, height: h };
+    }
     const jpeg = canvas.toDataURL("image/jpeg", 0.84);
-    return jpeg.startsWith("data:image/jpeg") ? jpeg : png;
+    return {
+      dataUri: jpeg.startsWith("data:image/jpeg") ? jpeg : png,
+      width: w,
+      height: h,
+    };
   } finally {
     bitmap.close();
   }
 }
 
+export type PreparedWorksheetImage = {
+  dataUri: string;
+  alt: string;
+  width: number;
+  height: number;
+};
+
+export async function blobToPreparedImage(file: Blob, alt = "screenshot"): Promise<PreparedWorksheetImage> {
+  const raster = await rasterToDataUri(file);
+  if (!raster.dataUri.startsWith("data:image/")) throw new Error("Not an image");
+  let { width, height } = raster;
+  if (width < 2 && height < 2 && typeof Image !== "undefined") {
+    try {
+      const natural = await naturalSizeFromDataUri(raster.dataUri);
+      width = natural.width;
+      height = natural.height;
+    } catch {
+      width = 800;
+      height = 600;
+    }
+  }
+  const safeAlt = alt.replace(/["<>\n]/g, " ").trim() || "screenshot";
+  return { dataUri: raster.dataUri, alt: safeAlt, width, height };
+}
+
 export async function fileToWorksheetImage(file: Blob, alt = "screenshot"): Promise<string> {
-  const dataUri = await rasterToDataUri(file);
-  if (!dataUri.startsWith("data:image/")) throw new Error("Not an image");
-  return worksheetImageComment(dataUri, alt);
+  const prepared = await blobToPreparedImage(file, alt);
+  return worksheetImageComment(prepared.dataUri, prepared.alt, {
+    width: prepared.width,
+    height: prepared.height,
+  });
 }
 
 export async function filesToWorksheetImages(files: File[]): Promise<string> {

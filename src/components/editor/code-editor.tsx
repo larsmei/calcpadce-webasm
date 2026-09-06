@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EditorView, keymap, highlightActiveLine, lineNumbers, highlightActiveLineGutter, drawSelection } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
@@ -7,11 +7,17 @@ import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { autocompletion, closeBrackets, completionKeymap, type CompletionContext } from "@codemirror/autocomplete";
 import { tags } from "@lezer/highlight";
 import { calcpadLanguage, CALCPAD_COMPLETIONS } from "@/lib/calcpad/language";
-import { imageFold } from "@/lib/calcpad/image-fold";
+import { IMAGE_SIZE_EVENT, imageFold } from "@/lib/calcpad/image-fold";
+import { ImageSizeDialog } from "@/components/editor/image-size-dialog";
 import {
-  filesToWorksheetImages,
+  blobToPreparedImage,
+  findWorksheetImageRanges,
   imageSnippetAtCursor,
   imagesToInsert,
+  rewriteWorksheetImageStyle,
+  worksheetImageComment,
+  type ImageDisplaySize,
+  type PreparedWorksheetImage,
 } from "@/lib/calcpad/paste-image";
 
 const highlight = HighlightStyle.define([
@@ -91,12 +97,16 @@ function insertSnippet(view: EditorView, snippet: string, from: number, to: numb
   view.focus();
 }
 
-async function insertClipboardImages(view: EditorView, files: File[], from: number, to: number) {
-  const snippet = await filesToWorksheetImages(files);
-  if (!snippet || !view.dom.isConnected) return;
-  const max = view.state.doc.length;
-  insertSnippet(view, snippet, Math.min(from, max), Math.min(to, max));
-}
+type PendingInsert = PreparedWorksheetImage & { from: number; to: number };
+type PendingResize = {
+  from: number;
+  dataUri: string;
+  alt: string;
+  naturalWidth: number;
+  naturalHeight: number;
+  width: number;
+  height: number;
+};
 
 type Props = {
   value: string;
@@ -112,6 +122,15 @@ export function CodeEditor({ value, onChange, onRun, focusLine }: Props) {
   const onRunRef = useRef(onRun);
   onChangeRef.current = onChange;
   onRunRef.current = onRun;
+  const queueRef = useRef<PendingInsert[]>([]);
+  const insertPosRef = useRef<{ from: number; to: number } | null>(null);
+  const [pendingInsert, setPendingInsert] = useState<PendingInsert | null>(null);
+  const [pendingResize, setPendingResize] = useState<PendingResize | null>(null);
+
+  function showNextInsert() {
+    const next = queueRef.current.shift() ?? null;
+    setPendingInsert(next);
+  }
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -154,7 +173,7 @@ export function CodeEditor({ value, onChange, onRun, focusLine }: Props) {
               if (!images.length) return false;
               event.preventDefault();
               const { from, to } = v.state.selection.main;
-              void insertClipboardImages(v, images, from, to);
+              void queueClipboardImages(v, images, from, to);
               return true;
             },
             drop(event, v) {
@@ -164,7 +183,7 @@ export function CodeEditor({ value, onChange, onRun, focusLine }: Props) {
               const pos =
                 v.posAtCoords({ x: event.clientX, y: event.clientY }) ??
                 v.state.selection.main.head;
-              void insertClipboardImages(v, images, pos, pos);
+              void queueClipboardImages(v, images, pos, pos);
               return true;
             },
             dragover(event) {
@@ -183,7 +202,70 @@ export function CodeEditor({ value, onChange, onRun, focusLine }: Props) {
       }),
     });
     viewRef.current = view;
+
+    const onSize = (event: Event) => {
+      const from = (event as CustomEvent<{ from?: number }>).detail?.from;
+      if (typeof from !== "number") return;
+      const range = findWorksheetImageRanges(view.state.doc.toString()).find((item) => item.from === from);
+      if (!range) return;
+      const naturalWidth = range.width && range.width > 0 ? range.width : 800;
+      const naturalHeight = range.height && range.height > 0 ? range.height : Math.round(naturalWidth * 0.75);
+      setPendingResize({
+        from: range.from,
+        dataUri: range.dataUri,
+        alt: range.alt,
+        naturalWidth,
+        naturalHeight,
+        width: range.width ?? naturalWidth,
+        height: range.height && range.height > 0 ? range.height : naturalHeight,
+      });
+      void (async () => {
+        try {
+          const img = new Image();
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error("size"));
+            img.src = range.dataUri;
+          });
+          const nw = Math.max(1, img.naturalWidth || img.width || naturalWidth);
+          const nh = Math.max(1, img.naturalHeight || img.height || naturalHeight);
+          setPendingResize((cur) =>
+            cur && cur.from === range.from
+              ? {
+                  ...cur,
+                  naturalWidth: nw,
+                  naturalHeight: nh,
+                  width: range.width ?? nw,
+                  height: range.height && range.height > 0 ? range.height : nh,
+                }
+              : cur,
+          );
+        } catch {
+          /* keep parsed size */
+        }
+      })();
+    };
+    view.dom.addEventListener(IMAGE_SIZE_EVENT, onSize);
+
+    async function queueClipboardImages(v: EditorView, files: File[], from: number, to: number) {
+      const prepared: PendingInsert[] = [];
+      for (const file of files) {
+        const name = file.name.replace(/\.[^.]+$/, "") || "screenshot";
+        try {
+          const item = await blobToPreparedImage(file, name);
+          prepared.push({ ...item, from, to });
+        } catch {
+          /* skip unreadable clipboard items */
+        }
+      }
+      if (!prepared.length || !v.dom.isConnected) return;
+      insertPosRef.current = { from: prepared[0].from, to: prepared[0].to };
+      queueRef.current = prepared;
+      showNextInsert();
+    }
+
     return () => {
+      view.dom.removeEventListener(IMAGE_SIZE_EVENT, onSize);
       view.destroy();
       viewRef.current = null;
     };
@@ -213,5 +295,72 @@ export function CodeEditor({ value, onChange, onRun, focusLine }: Props) {
     view.focus();
   }, [focusLine]);
 
-  return <div ref={hostRef} className="h-full min-h-0 w-full" />;
+  function confirmInsert(size: ImageDisplaySize) {
+    const view = viewRef.current;
+    const item = pendingInsert;
+    if (!view || !item) return;
+    const max = view.state.doc.length;
+    const pos = insertPosRef.current ?? { from: item.from, to: item.to };
+    const from = Math.min(pos.from, max);
+    const to = Math.min(pos.to, max);
+    const snippet = worksheetImageComment(item.dataUri, item.alt, size);
+    const { insert } = imageSnippetAtCursor(view.state.doc.toString(), from, to, snippet);
+    insertSnippet(view, snippet, from, to);
+    insertPosRef.current = { from: from + insert.length, to: from + insert.length };
+    showNextInsert();
+  }
+
+  function confirmResize(size: ImageDisplaySize) {
+    const view = viewRef.current;
+    const item = pendingResize;
+    if (!view || !item) return;
+    const range = findWorksheetImageRanges(view.state.doc.toString()).find((entry) => entry.from === item.from);
+    setPendingResize(null);
+    if (!range) return;
+    const doc = view.state.doc.toString();
+    const nextDoc = rewriteWorksheetImageStyle(doc, range, size);
+    const insert = nextDoc.slice(range.from, nextDoc.length - (doc.length - range.to));
+    view.dispatch({
+      changes: { from: range.from, to: range.to, insert },
+      scrollIntoView: true,
+    });
+    view.focus();
+  }
+
+  return (
+    <>
+      <div ref={hostRef} className="h-full min-h-0 w-full" />
+      <ImageSizeDialog
+        open={Boolean(pendingInsert)}
+        title="Image size"
+        confirmLabel="Insert"
+        previewSrc={pendingInsert?.dataUri}
+        naturalWidth={pendingInsert?.width ?? 1}
+        naturalHeight={pendingInsert?.height ?? 1}
+        width={pendingInsert?.width ?? 1}
+        height={pendingInsert?.height ?? 1}
+        onOpenChange={(open) => {
+          if (!open) {
+            queueRef.current = [];
+            setPendingInsert(null);
+          }
+        }}
+        onConfirm={confirmInsert}
+      />
+      <ImageSizeDialog
+        open={Boolean(pendingResize)}
+        title="Image size"
+        confirmLabel="Apply"
+        previewSrc={pendingResize?.dataUri}
+        naturalWidth={pendingResize?.naturalWidth ?? 1}
+        naturalHeight={pendingResize?.naturalHeight ?? 1}
+        width={pendingResize?.width ?? 1}
+        height={pendingResize?.height ?? 1}
+        onOpenChange={(open) => {
+          if (!open) setPendingResize(null);
+        }}
+        onConfirm={confirmResize}
+      />
+    </>
+  );
 }

@@ -4,7 +4,7 @@
 
 No server is required. Host the static zip on Apache, nginx, or any file server.
 
-Latest release: [v0.3.11](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.11)
+Latest release: [v0.3.12](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.12)
 
 Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE) (MIT).
 
@@ -58,7 +58,7 @@ M_max = q*L^2/k_M
 
 ### Screenshots
 
-Paste (**Ctrl/⌘ V**) or drop a PNG/JPEG into the **source editor**. The image is inserted **at the cursor** as a Calcpad HTML comment with an inline data URI. In the editor the data URI is **folded** into a compact preview (click to show or hide the source):
+Paste (**Ctrl/⌘ V**) or drop a PNG/JPEG into the **source editor**. A dialog asks for the **display size** (pre-filled with the real pixel size, aspect ratio locked). Only the `style` attribute changes — the image bytes are not re-encoded. The picture is inserted **at the cursor** as a Calcpad HTML comment with an inline data URI. In the editor the data URI is **folded** into a compact card; use the size icon on the card to change width/height later. The toolbar pencil next to the file name renames the worksheet (`.cpd` is added if missing).
 
 ```
 '<img src="data:image/png;base64,…" alt="screenshot">
@@ -81,7 +81,7 @@ Acrobat shows the worksheet under the paperclip / Attachments panel.
 
 The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page.
 
-Download **`calcpadce-static-v0.3.11.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+Download **`calcpadce-static-v0.3.12.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
 
 ```
 index.html

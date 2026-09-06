@@ -10,8 +10,10 @@ import {
   Settings2,
   SquareAsterisk,
   Cpu,
+  Pencil,
 } from "lucide-react";
 import { Group, Panel, Separator as ResizeSeparator } from "react-resizable-panels";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -34,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { assetUrl } from "@/lib/calcpad/asset-url";
 import { exportPdfReport } from "@/lib/calcpad/export-pdf";
 import { readUiOverrides } from "@/lib/calcpad/worksheet-meta";
+import { ensureCpdFileName } from "@/lib/calcpad/file-name";
 
 function downloadText(filename: string, contents: string, mime: string) {
   const blob = new Blob([contents], { type: mime });
@@ -97,6 +100,8 @@ export function Workspace() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [importHint, setImportHint] = useState<string | null>(null);
   const [focusLine, setFocusLine] = useState<{ line: number; key: number } | null>(null);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameDraft, setRenameDraft] = useState(fileName);
   const fileRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<number | null>(null);
   const sourceRef = useRef(source);
@@ -331,8 +336,29 @@ export function Workspace() {
                   WebAssembly
                 </Badge>
               </div>
-              <p className="hidden truncate text-[11px] text-muted-foreground md:block">
-                {fileName} · Calcpad.Core in the browser
+              <p className="flex min-w-0 items-center gap-0.5 text-[11px] text-muted-foreground">
+                <span className="truncate" title={fileName}>
+                  {fileName}
+                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      className="size-6 shrink-0 text-muted-foreground"
+                      aria-label="Rename worksheet"
+                      onClick={() => {
+                        setRenameDraft(fileName);
+                        setRenameOpen(true);
+                      }}
+                    >
+                      <Pencil className="size-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Rename worksheet</TooltipContent>
+                </Tooltip>
+                <span className="hidden truncate md:inline"> · Calcpad.Core in the browser</span>
               </p>
             </div>
           </div>
@@ -588,6 +614,41 @@ export function Workspace() {
           }}
         />
       ) : null}
+      <Dialog
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+      >
+        <DialogContent className="w-[min(92vw,24rem)]">
+          <DialogHeader>
+            <DialogTitle>Rename worksheet</DialogTitle>
+            <DialogDescription>
+              Used for Save, HTML and PDF. The <code>.cpd</code> extension is added if it is missing.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="grid gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setFileName(ensureCpdFileName(renameDraft));
+              setRenameOpen(false);
+            }}
+          >
+            <input
+              autoFocus
+              value={renameDraft}
+              onChange={(e) => setRenameDraft(e.target.value)}
+              className="h-10 w-full rounded-[var(--radius-sm)] border border-border bg-background px-3 text-sm text-foreground"
+              aria-label="Worksheet file name"
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setRenameOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Rename</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
       <SettingsDialog
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
