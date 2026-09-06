@@ -1,0 +1,5 @@
+' Embedded SVG. Interpolated numbers in attributes work without wrapping #val.
+'<svg viewbox="'-10' '-10' '20' '20'" xmlns="http://www.w3.org/2000/svg" version="1.1" style="font-family: Segoe UI; font-size:8px; width:'80'pt; height:'80'pt">
+'<style>.joint{fill:orangeRed;} .support{stroke:red; stroke-width:1; fill:lightpink;} .element{stroke:seaGreen; stroke-width:1; fill:lime; fill-opacity:0.1; stroke-opacity:0.5;} .struct{fill:yellow; fill-opacity:0.25;stroke:goldenRod; stroke-opacity:0.5;}</style>
+'<circle cx="'0'" cy="'0'" r="'5'" class="joint" />
+'</svg>

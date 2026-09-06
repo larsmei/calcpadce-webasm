@@ -7,6 +7,7 @@ const ROWS: Array<[string, string]> = [
   ["Image", "Paste / drop — folded at the cursor"],
   ["Greek", "αβ in the status bar — insert at the cursor"],
   ["Fold", "'<div class=\"fold\">  …  '</div>"],
+  ["SVG", "'<svg viewbox=\"'x' 'y' 'w' 'h'\">  …"],
   ["Input", "r = ? {5} cm"],
   ["UI field", "#UI L = 6m"],
   ["Dropdown", '#UI {"type":"dropdown","keys":["A","B"],"values":["1","2"]} n = 1'],

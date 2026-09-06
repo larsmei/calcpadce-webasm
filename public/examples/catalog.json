@@ -12,6 +12,12 @@
     "preview": "' Foldable report sections. Click a heading to expand. PDF export stays collapsed.\n'<div class=\"fold\">\n'<h1>Allgemeine Hydraulikberechnungen</h1>\n"
   },
   {
+    "title": "Embedded SVG",
+    "file": "embedded-svg.cpd",
+    "bytes": 565,
+    "preview": "' Embedded SVG. Interpolated numbers in attributes work without wrapping #val.\n'<svg viewbox=\"'-10' '-10' '20' '20'\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" style=\"font-family: Segoe UI; font-size:8px; width:'80'pt; height:'80'pt\">\n"
+  },
+  {
     "title": "Cylinder Volume",
     "file": "cylinder-volume.cpd",
     "bytes": 85,

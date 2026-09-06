@@ -1,6 +1,7 @@
 import type { EngineOptions, ParseError, ParseResult, ViewMode } from "./types";
 import { assetUrl } from "./asset-url";
 import { detachInlineImages, reattachInlineImages } from "./paste-image";
+import { flattenSvgEquations } from "./svg-html";
 
 type ParseRawFn = (source: string, optionsJson: string) => string;
 type PingFn = () => string;
@@ -213,6 +214,7 @@ export function parseWorksheet(source: string, options: EngineOptions): ParseRes
     throw new Error("Engine is not ready.");
   }
   const result = decodeParsePayload(payload);
+  result.html = flattenSvgEquations(result.html);
   if (detached.images.length) {
     result.html = reattachInlineImages(result.html, detached.images);
   }

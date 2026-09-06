@@ -56,10 +56,14 @@
   font-family: "Segoe UI", system-ui, sans-serif;
 }
 
-.calcpad-paper img:not(.worksheet-image),
-.calcpad-paper svg {
+.calcpad-paper img:not(.worksheet-image) {
   max-width: 100%;
   height: auto;
+}
+
+.calcpad-paper svg {
+  max-width: 100%;
+  overflow: visible;
 }
 
 .calcpad-paper img.worksheet-image {

@@ -4,7 +4,7 @@
 
 No server is required. Host the static zip on Apache, nginx, or any file server.
 
-Latest release: [v0.3.14](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.14)
+Latest release: [v0.3.15](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.15)
 
 Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE) (MIT).
 
@@ -85,6 +85,16 @@ Sections start **collapsed** when the report opens. **PDF export** writes them c
 
 **αβ** in the status bar opens a two-row palette (lowercase / uppercase). Click a letter to insert it at the source cursor. The palette stays closed until you need it.
 
+### Embedded SVG
+
+HTML comments that start with `'<svg` are rendered as drawings. Numbers interpolated with nested quotes (`viewbox="'-10' '-10' '20' '20'"`) become values, so the SVG stays valid even without wrapping `#val` … `#equ` (still the desktop-compatible form).
+
+```
+'<svg viewbox="'-10' '-10' '20' '20'" xmlns="http://www.w3.org/2000/svg" style="width:'80'pt; height:'80'pt">
+'<circle cx="'0'" cy="'0'" r="'5'" fill="orangeRed" />
+'</svg>
+```
+
 ### PDF
 
 - A4 (210 × 297 mm)
@@ -100,7 +110,7 @@ Acrobat shows the worksheet under the paperclip / Attachments panel.
 
 The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page.
 
-Download **`calcpadce-static-v0.3.14.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+Download **`calcpadce-static-v0.3.15.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
 
 ```
 index.html
