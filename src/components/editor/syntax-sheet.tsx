@@ -5,6 +5,7 @@ type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 const ROWS: Array<[string, string]> = [
   ["Comment", "' text   or   \"text\""],
   ["Image", "Paste / drop — folded at the cursor"],
+  ["Greek", "αβ in the status bar — insert at the cursor"],
   ["Fold", "'<div class=\"fold\">  …  '</div>"],
   ["Input", "r = ? {5} cm"],
   ["UI field", "#UI L = 6m"],

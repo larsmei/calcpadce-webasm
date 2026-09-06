@@ -4,7 +4,7 @@
 
 No server is required. Host the static zip on Apache, nginx, or any file server.
 
-Latest release: [v0.3.13](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.13)
+Latest release: [v0.3.14](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.14)
 
 Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE) (MIT).
 
@@ -17,6 +17,7 @@ Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE)
 - `#if` / `#for` / `#while` / `#def`
 - Calcpad syntax highlighting (including unclosed quotes)
 - Paste screenshots into the source at the cursor
+- Greek letters from a hideable palette in the status bar
 - Example catalog and HTML report export
 - Fast engine path: native WebAssembly AOT plus RPN evaluation (no `Expression.Compile` in the browser). First load is heavier (~25 MB engine); plots, integrals and `$Repeat` are much quicker after that.
 
@@ -80,6 +81,10 @@ Sections start **collapsed** when the report opens. **PDF export** writes them c
 '</div>
 ```
 
+### Greek letters
+
+**αβ** in the status bar opens a two-row palette (lowercase / uppercase). Click a letter to insert it at the source cursor. The palette stays closed until you need it.
+
 ### PDF
 
 - A4 (210 × 297 mm)
@@ -95,7 +100,7 @@ Acrobat shows the worksheet under the paperclip / Attachments panel.
 
 The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page.
 
-Download **`calcpadce-static-v0.3.13.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+Download **`calcpadce-static-v0.3.14.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
 
 ```
 index.html

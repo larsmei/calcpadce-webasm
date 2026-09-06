@@ -8,6 +8,7 @@ import { autocompletion, closeBrackets, completionKeymap, type CompletionContext
 import { tags } from "@lezer/highlight";
 import { calcpadLanguage, CALCPAD_COMPLETIONS } from "@/lib/calcpad/language";
 import { IMAGE_SIZE_EVENT, imageFold } from "@/lib/calcpad/image-fold";
+import { setEditorInsertHandler } from "@/lib/calcpad/greek";
 import { ImageSizeDialog } from "@/components/editor/image-size-dialog";
 import {
   blobToPreparedImage,
@@ -246,6 +247,17 @@ export function CodeEditor({ value, onChange, onRun, focusLine }: Props) {
       })();
     };
     view.dom.addEventListener(IMAGE_SIZE_EVENT, onSize);
+    setEditorInsertHandler((text) => {
+      const v = viewRef.current;
+      if (!v || !text) return;
+      const { from, to } = v.state.selection.main;
+      v.dispatch({
+        changes: { from, to, insert: text },
+        selection: { anchor: from + text.length },
+        scrollIntoView: true,
+      });
+      v.focus();
+    });
 
     async function queueClipboardImages(v: EditorView, files: File[], from: number, to: number) {
       const prepared: PendingInsert[] = [];
@@ -265,6 +277,7 @@ export function CodeEditor({ value, onChange, onRun, focusLine }: Props) {
     }
 
     return () => {
+      setEditorInsertHandler(null);
       view.dom.removeEventListener(IMAGE_SIZE_EVENT, onSize);
       view.destroy();
       viewRef.current = null;

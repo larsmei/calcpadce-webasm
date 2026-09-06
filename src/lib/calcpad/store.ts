@@ -23,6 +23,7 @@ type CalcpadState = {
   autoRun: boolean;
   viewMode: ViewMode;
   uiOverrides: Record<string, string>;
+  greekBar: boolean;
   setSource: (source: string) => void;
   setOptions: (patch: Partial<EngineOptions>) => void;
   setResult: (html: string, errors: ParseError[], ms: number) => void;
@@ -31,6 +32,7 @@ type CalcpadState = {
   setAutoRun: (autoRun: boolean) => void;
   setViewMode: (viewMode: ViewMode) => void;
   setUiOverrides: (uiOverrides: Record<string, string>) => void;
+  setGreekBar: (greekBar: boolean) => void;
   resetWorksheet: () => void;
 };
 
@@ -48,6 +50,7 @@ export const useCalcpadStore = create<CalcpadState>()(
       autoRun: true,
       viewMode: "results",
       uiOverrides: {},
+      greekBar: false,
       setSource: (source) => set({ source }),
       setOptions: (patch) =>
         set((s) => ({ options: { ...s.options, ...patch } })),
@@ -58,6 +61,7 @@ export const useCalcpadStore = create<CalcpadState>()(
       setAutoRun: (autoRun) => set({ autoRun }),
       setViewMode: (viewMode) => set({ viewMode }),
       setUiOverrides: (uiOverrides) => set({ uiOverrides }),
+      setGreekBar: (greekBar) => set({ greekBar }),
       resetWorksheet: () =>
         set({
           source: DEFAULT_WORKSHEET,
@@ -78,6 +82,7 @@ export const useCalcpadStore = create<CalcpadState>()(
         autoRun: s.autoRun,
         viewMode: s.viewMode,
         uiOverrides: s.uiOverrides,
+        greekBar: s.greekBar,
       }),
     },
   ),

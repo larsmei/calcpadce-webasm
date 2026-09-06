@@ -19,6 +19,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CodeEditor } from "@/components/editor/code-editor";
 import { Paper } from "@/components/editor/paper";
+import { GreekBar } from "@/components/editor/greek-bar";
+import { insertEditorText } from "@/lib/calcpad/greek";
 import { SettingsDialog } from "@/components/editor/settings-dialog";
 import { ExamplesPanel } from "@/components/editor/examples-panel";
 import { SyntaxSheet } from "@/components/editor/syntax-sheet";
@@ -94,6 +96,7 @@ export function Workspace() {
   const autoRun = useCalcpadStore((s) => s.autoRun);
   const viewMode = useCalcpadStore((s) => s.viewMode);
   const uiOverrides = useCalcpadStore((s) => s.uiOverrides);
+  const greekBar = useCalcpadStore((s) => s.greekBar);
   const setSource = useCalcpadStore((s) => s.setSource);
   const setOptions = useCalcpadStore((s) => s.setOptions);
   const setResult = useCalcpadStore((s) => s.setResult);
@@ -101,6 +104,7 @@ export function Workspace() {
   const setFileName = useCalcpadStore((s) => s.setFileName);
   const setViewMode = useCalcpadStore((s) => s.setViewMode);
   const setUiOverrides = useCalcpadStore((s) => s.setUiOverrides);
+  const setGreekBar = useCalcpadStore((s) => s.setGreekBar);
   const resetWorksheet = useCalcpadStore((s) => s.resetWorksheet);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -576,6 +580,15 @@ export function Workspace() {
           )}
         </div>
 
+        {greekBar ? (
+          <GreekBar
+            onInsert={(ch) => {
+              setMobileTab("code");
+              insertEditorText(ch);
+            }}
+          />
+        ) : null}
+
         <footer className="flex h-9 shrink-0 items-center gap-3 border-t border-border px-3 text-[11px] text-muted-foreground print:hidden">
           <span
             className={cn(
@@ -606,8 +619,26 @@ export function Workspace() {
           )}
           {bootError && <span className="truncate text-destructive">{bootError}</span>}
           {importHint && <span className="truncate text-destructive">{importHint}</span>}
-          <span className="ml-auto hidden sm:inline">
-            {options.degrees === 0 ? "DEG" : options.degrees === 1 ? "RAD" : "GRA"} · {options.decimals} dp
+          <span className="ml-auto flex items-center gap-1.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={greekBar ? "secondary" : "ghost"}
+                  className="h-7 px-2 text-sm"
+                  aria-label="Greek letters"
+                  aria-pressed={greekBar}
+                  onClick={() => setGreekBar(!greekBar)}
+                >
+                  αβ
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{greekBar ? "Hide Greek letters" : "Show Greek letters"}</TooltipContent>
+            </Tooltip>
+            <span className="hidden sm:inline">
+              {options.degrees === 0 ? "DEG" : options.degrees === 1 ? "RAD" : "GRA"} · {options.decimals} dp
+            </span>
           </span>
         </footer>
       </div>
