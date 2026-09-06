@@ -42,7 +42,7 @@ export function GreekBar({ onInsert }: Props) {
   return (
     <div
       className={cn(
-        "shrink-0 border-t border-border bg-muted/60 px-2 py-1.5 print:hidden md:px-3",
+        "shrink-0 border-t border-border bg-muted px-2 py-1.5 print:hidden md:px-3",
       )}
       onMouseDown={(e) => e.preventDefault()}
       role="toolbar"

@@ -339,8 +339,8 @@ export function Workspace() {
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex h-dvh min-h-0 flex-col bg-background text-foreground">
-        <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-1.5 print:hidden md:px-4">
+      <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-background text-foreground print:static print:h-auto print:overflow-visible">
+        <header className="relative z-20 flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-border bg-background px-3 pb-1.5 pt-[max(0.375rem,env(safe-area-inset-top))] print:hidden md:px-4">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="grid size-8 place-items-center rounded-[var(--radius-sm)] bg-primary text-primary-foreground">
               <SquareAsterisk className="size-4" strokeWidth={2} />
@@ -429,11 +429,11 @@ export function Workspace() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon-sm" variant="ghost" className="hidden sm:inline-flex" onClick={() => setSyntaxOpen(true)}>
+                <Button size="icon-sm" variant="ghost" aria-label="Cheatsheet" onClick={() => setSyntaxOpen(true)}>
                   <Cpu className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Syntax</TooltipContent>
+              <TooltipContent>Cheatsheet</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -535,7 +535,7 @@ export function Workspace() {
           </div>
         </header>
 
-        <div className="flex gap-1 border-b border-border px-3 py-1 print:hidden md:hidden">
+        <div className="flex gap-1 border-b border-border bg-background px-3 py-1 print:hidden md:hidden">
           <button
             type="button"
             className={cn(
@@ -589,7 +589,7 @@ export function Workspace() {
           />
         ) : null}
 
-        <footer className="flex h-9 shrink-0 items-center gap-3 border-t border-border px-3 text-[11px] text-muted-foreground print:hidden">
+        <footer className="relative z-20 flex min-h-11 shrink-0 items-center gap-3 border-t border-border bg-background px-3 text-xs text-muted-foreground print:hidden pb-[max(0.25rem,env(safe-area-inset-bottom))]">
           <span
             className={cn(
               "inline-flex items-center gap-1.5",
@@ -620,6 +620,21 @@ export function Workspace() {
           {bootError && <span className="truncate text-destructive">{bootError}</span>}
           {importHint && <span className="truncate text-destructive">{importHint}</span>}
           <span className="ml-auto flex items-center gap-1.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 px-2 md:hidden"
+                  aria-label="Cheatsheet"
+                  onClick={() => setSyntaxOpen(true)}
+                >
+                  <Cpu className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Cheatsheet</TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -703,7 +718,14 @@ export function Workspace() {
         onOpenChange={setExamplesOpen}
         onPick={(_title, text, file) => loadWorksheet(text, file)}
       />
-      <SyntaxSheet open={syntaxOpen} onOpenChange={setSyntaxOpen} />
+      <SyntaxSheet
+        open={syntaxOpen}
+        onOpenChange={setSyntaxOpen}
+        onInsert={(text) => {
+          setMobileTab("code");
+          insertEditorText(text);
+        }}
+      />
     </TooltipProvider>
   );
 }
