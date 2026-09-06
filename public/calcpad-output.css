@@ -516,13 +516,17 @@
         }
 
         .fold {
-            height: 2.4em;
+            height: auto;
             overflow: hidden;
+        }
+
+        .fold > :not(:first-child) {
+            display: none;
         }
 
         .unfold {
             height: auto;
-            overflow: auto;
+            overflow: visible;
         }
 
             .fold > :first-child, .unfold > :first-child {

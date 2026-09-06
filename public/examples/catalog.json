@@ -6,6 +6,12 @@
     "preview": "'<!-- Input form vs calculated report. Switch Form / Results in the toolbar. -->\n'<h2>Simply supported beam</h2>\n#pre\n'<h3>Input data</h3>\n#UI 'Span - 'L = 5m\n"
   },
   {
+    "title": "Foldable Sections",
+    "file": "fold-sections.cpd",
+    "bytes": 503,
+    "preview": "' Foldable report sections. Click a heading to expand. PDF export stays collapsed.\n'<div class=\"fold\">\n'<h1>Allgemeine Hydraulikberechnungen</h1>\n"
+  },
+  {
     "title": "Cylinder Volume",
     "file": "cylinder-volume.cpd",
     "bytes": 85,

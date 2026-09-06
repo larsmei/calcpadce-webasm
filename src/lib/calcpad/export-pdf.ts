@@ -1,4 +1,5 @@
 import { assetUrl } from "@/lib/calcpad/asset-url";
+import { collapsePaperFolds } from "@/lib/calcpad/paper-fold";
 
 /** CSS px per millimetre at the standard 96 dpi used by browsers. */
 const MM = 96 / 25.4;
@@ -510,7 +511,9 @@ body {
 }
 .lineLink, .errorHeader, .no-print, .no-screen { display: none !important; }
 .value:after { display: none !important; }
-.fold { height: auto !important; overflow: visible !important; }
+.fold { height: auto !important; overflow: hidden !important; }
+.fold > :not(:first-child) { display: none !important; }
+.unfold { height: auto !important; overflow: visible !important; }
 .side { float: none !important; max-width: 100% !important; }
 .ref { float: right; }
 .pdf-measure {
@@ -576,10 +579,7 @@ export async function exportPdfReport(
     clone.removeAttribute("style");
     clone.querySelectorAll("script").forEach((s) => s.remove());
     clone.querySelectorAll(".lineLink, .errorHeader").forEach((s) => s.remove());
-    clone.querySelectorAll(".fold").forEach((el) => {
-      el.classList.remove("fold");
-      el.classList.add("unfold");
-    });
+    collapsePaperFolds(clone, { prune: true });
     replaceCanvases(paper, clone);
     bodyHtml = clone.innerHTML;
   }
@@ -628,6 +628,7 @@ export async function exportPdfReport(
   }
 
   measure.innerHTML = bodyHtml;
+  collapsePaperFolds(measure, { prune: true });
   wrapKeepTogether(measure);
   await waitForImages(measure);
   for (const svg of [...measure.querySelectorAll("svg")]) {

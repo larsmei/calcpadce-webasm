@@ -6,6 +6,7 @@ import {
   hydrateUiDatagrids,
   isPaperControl,
 } from "@/lib/calcpad/inputs";
+import { collapsePaperFolds, foldFromHeaderClick } from "@/lib/calcpad/paper-fold";
 import { runEmbeddedScripts } from "@/lib/calcpad/run-scripts";
 import type { ViewMode } from "@/lib/calcpad/types";
 import { cn } from "@/lib/utils";
@@ -56,7 +57,7 @@ export function Paper({
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      const fold = target.closest(".fold, .unfold");
+      const fold = foldFromHeaderClick(target);
       if (fold) {
         fold.classList.toggle("fold");
         fold.classList.toggle("unfold");
@@ -121,6 +122,7 @@ export function Paper({
     };
 
     hydrateUiDatagrids(root);
+    collapsePaperFolds(root);
 
     root.addEventListener("click", onClick);
     root.addEventListener("change", onChange);

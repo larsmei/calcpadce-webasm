@@ -4,7 +4,7 @@
 
 No server is required. Host the static zip on Apache, nginx, or any file server.
 
-Latest release: [v0.3.12](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.12)
+Latest release: [v0.3.13](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.13)
 
 Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE) (MIT).
 
@@ -66,6 +66,20 @@ Paste (**Ctrl/⌘ V**) or drop a PNG/JPEG into the **source editor**. A dialog a
 
 Long data URIs are wrapped with Calcpad ` _` line continuation. The report renders the picture; PDF export paints it on the page **and** keeps it inside the attached `.cpd`, so Open → PDF restores the images.
 
+### Foldable sections (`div.fold`)
+
+Wrap a block in `'<div class="fold">` … `'</div>`. The **first child** is the heading (any size: `h1`…`h4` or a quoted line); everything after it stays hidden until you click the heading. Official Calcpad used a fixed `2.4em` clip — large headings were cut off. Here the heading is shown in full.
+
+Sections start **collapsed** when the report opens. **PDF export** writes them collapsed (heading only). Click the heading in the report to expand.
+
+```
+'<div class="fold">
+'<h1>Allgemeine Hydraulikberechnungen</h1>
+'Kennwert einer gegebenen Hydraulikpumpe:
+'Pumpengröße' V_Geo = ? {2.0} cm^3
+'</div>
+```
+
 ### PDF
 
 - A4 (210 × 297 mm)
@@ -81,7 +95,7 @@ Acrobat shows the worksheet under the paperclip / Attachments panel.
 
 The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page.
 
-Download **`calcpadce-static-v0.3.12.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+Download **`calcpadce-static-v0.3.13.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
 
 ```
 index.html

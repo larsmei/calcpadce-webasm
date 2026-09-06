@@ -335,11 +335,13 @@
         }.calcpad-paper span.indent{
             display: inline-block;
         }.calcpad-paper .fold{
-            height: 2.4em;
+            height: auto;
             overflow: hidden;
+        }.calcpad-paper .fold > :not(:first-child){
+            display: none;
         }.calcpad-paper .unfold{
             height: auto;
-            overflow: auto;
+            overflow: visible;
         }.calcpad-paper .fold > :first-child, .calcpad-paper .unfold > :first-child{
                 cursor: pointer;
             }.calcpad-paper .fold > :first-child:hover, .calcpad-paper .unfold > :first-child:hover{

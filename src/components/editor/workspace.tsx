@@ -65,6 +65,18 @@ async function exportHtmlReport(fileName: string, html: string) {
 </head>
 <body>
 ${html}
+<script>
+document.addEventListener("click", function (e) {
+  var t = e.target;
+  if (!t || !t.closest) return;
+  var fold = t.closest(".fold, .unfold");
+  if (!fold) return;
+  var header = fold.firstElementChild;
+  if (!header || !header.contains(t)) return;
+  fold.classList.toggle("fold");
+  fold.classList.toggle("unfold");
+});
+</script>
 </body>
 </html>`;
   downloadText(`${title}.html`, doc, "text/html");

@@ -1,0 +1,18 @@
+' Foldable report sections. Click a heading to expand. PDF export stays collapsed.
+'<div class="fold">
+'<h1>Allgemeine Hydraulikberechnungen</h1>
+'<h3>Hydraulikpumpen</h3>
+'<h4>Für Pumpenkennwerte</h4>
+'Kennwert einer gegebenen Hydraulikpumpe:
+'Pumpengröße' V_Geo = ? {2.0} cm^3
+'Drehzahl' n = ? {3100} min^-1
+'folgt ein Volumenstrom von'
+Q_Geo = V_Geo * n | L/min
+'</div>
+
+'<div class="fold">
+'<h2>Zweite Sektion</h2>
+'Dieser Inhalt bleibt beim Öffnen und im PDF eingeklappt.
+x = 2
+y = x^2
+'</div>
