@@ -6,7 +6,7 @@ This port: **[larsmei/calcpadce-webasm](https://github.com/larsmei/calcpadce-web
 
 No server is required. Host the static zip on Apache, nginx, or any file server.
 
-Latest release: [v0.3.21](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.21)
+Latest release: [v0.3.22](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.22)
 
 Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE) (MIT).
 
@@ -86,7 +86,7 @@ Long data URIs are wrapped with Calcpad ` _` line continuation. The report rende
 
 Wrap a block in `'<div class="fold">` … `'</div>`. The **first child** is the heading (any size: `h1`…`h4` or a quoted line); everything after it stays hidden until you click the heading. Official Calcpad used a fixed `2.4em` clip — large headings were cut off. Here the heading is shown in full.
 
-Sections start **collapsed** when the report opens. **PDF export** writes them collapsed (heading only). Click the heading in the report to expand.
+Sections start **collapsed** when the report opens, in **PDF export**, and in the **source editor** (fold gutter ▸ / placeholder with the heading). Click the heading in the report, or the fold marker / placeholder in the source, to expand. Ctrl-Shift-[ / ] (Cmd-Alt-[ / ] on macOS) fold and unfold at the cursor.
 
 ```
 '<div class="fold">
@@ -129,7 +129,7 @@ Acrobat shows the worksheet under the paperclip / Attachments panel.
 
 The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page.
 
-Download **`calcpadce-static-v0.3.21.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+Download **`calcpadce-static-v0.3.22.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
 
 ```
 index.html

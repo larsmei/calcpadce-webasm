@@ -8,6 +8,7 @@ import { autocompletion, closeBrackets, completionKeymap, type CompletionContext
 import { tags } from "@lezer/highlight";
 import { calcpadLanguage, CALCPAD_COMPLETIONS } from "@/lib/calcpad/language";
 import { IMAGE_SIZE_EVENT, imageFold } from "@/lib/calcpad/image-fold";
+import { foldHtmlSections, htmlFold } from "@/lib/calcpad/html-fold";
 import { setEditorInsertHandler } from "@/lib/calcpad/greek";
 import { ImageSizeDialog } from "@/components/editor/image-size-dialog";
 import {
@@ -168,6 +169,7 @@ export function CodeEditor({ value, onChange, onRun, focusLine }: Props) {
           ]),
           theme,
           imageFold,
+          htmlFold,
           EditorView.domEventHandlers({
             paste(event, v) {
               const images = imagesToInsert(event.clipboardData, "paste");
@@ -197,12 +199,25 @@ export function CodeEditor({ value, onChange, onRun, focusLine }: Props) {
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
               onChangeRef.current(update.state.doc.toString());
+              let full = false;
+              update.changes.iterChangedRanges((fromA, toA) => {
+                if (fromA === 0 && toA === update.startState.doc.length) full = true;
+              });
+              if (full) {
+                const view = update.view;
+                queueMicrotask(() => {
+                  if (viewRef.current === view) foldHtmlSections(view);
+                });
+              }
             }
           }),
         ],
       }),
     });
     viewRef.current = view;
+    queueMicrotask(() => {
+      if (viewRef.current === view) foldHtmlSections(view);
+    });
 
     const onSize = (event: Event) => {
       const from = (event as CustomEvent<{ from?: number }>).detail?.from;

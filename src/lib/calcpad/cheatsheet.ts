@@ -214,7 +214,7 @@ export const CHEATSHEET: CheatSection[] = [
     blurb: "A line that starts with a quote is emitted as HTML in the report.",
     rows: [
       { name: "Heading", syntax: "'<h1>Title</h1>" },
-      { name: "Fold section", syntax: "'<div class=\"fold\">\n'<h2>Heading</h2>\n'body\n'</div>", note: "Starts collapsed. Click the heading to expand. PDF stays collapsed." },
+      { name: "Fold section", syntax: "'<div class=\"fold\">\n'<h2>Heading</h2>\n'body\n'</div>", note: "Starts collapsed in the report, PDF and source editor. Click the heading in the report, or the ▸ marker in the source, to expand." },
       {
         name: "SVG",
         syntax: "'<svg viewbox=\"'x' 'y' 'w' 'h'\" style=\"width:'80'pt; height:'80'pt\">\n'<circle cx=\"'0'\" cy=\"'0'\" r=\"'5'\" />\n'</svg>",
