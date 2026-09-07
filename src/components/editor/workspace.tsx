@@ -10,6 +10,7 @@ import {
   Settings2,
   SquareAsterisk,
   Pencil,
+  Github,
 } from "lucide-react";
 import { Group, Panel, Separator as ResizeSeparator } from "react-resizable-panels";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -607,6 +608,16 @@ export function Workspace() {
         ) : null}
 
         <footer className="relative z-30 flex min-h-11 shrink-0 items-center gap-3 border-t border-border bg-background px-3 text-xs text-muted-foreground print:hidden pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+          <a
+            href="https://github.com/larsmei/calcpadce-webasm"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex shrink-0 items-center gap-1 text-muted-foreground hover:text-foreground"
+            aria-label="GitHub repository"
+          >
+            <Github className="size-3.5" />
+            <span>GitHub</span>
+          </a>
           <span
             className={cn(
               "inline-flex items-center gap-1.5",

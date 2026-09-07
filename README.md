@@ -2,9 +2,11 @@
 
 [CalcpadCE](https://github.com/imartincei/CalcpadCE) in the browser: the `Calcpad.Core` engine (.NET 10) compiled to WebAssembly, with a React editor that parses `.cpd` worksheets and renders the same HTML reports as the desktop app.
 
+This port: **[larsmei/calcpadce-webasm](https://github.com/larsmei/calcpadce-webasm)**. A **GitHub** link sits at the left of the status bar.
+
 No server is required. Host the static zip on Apache, nginx, or any file server.
 
-Latest release: [v0.3.20](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.20)
+Latest release: [v0.3.21](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.21)
 
 Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE) (MIT).
 
@@ -127,7 +129,7 @@ Acrobat shows the worksheet under the paperclip / Attachments panel.
 
 The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page.
 
-Download **`calcpadce-static-v0.3.20.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+Download **`calcpadce-static-v0.3.21.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
 
 ```
 index.html
