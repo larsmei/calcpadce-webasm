@@ -51,9 +51,24 @@
   }
 }
 
+/* Official output CSS sets html { overflow-y: scroll } and .calcpad-paper { min-height: 100vh }.
+   Those are for a standalone report tab — here they push the last lines under the chrome. */
+html,
+body,
+#app,
+#root {
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
 .calcpad-paper {
   margin: 0 !important;
   max-width: none !important;
+  min-height: 0 !important;
+  height: 100%;
+  max-height: 100%;
   color: var(--color-paper-ink);
   background: var(--color-paper);
   font-family: "Segoe UI", system-ui, sans-serif;

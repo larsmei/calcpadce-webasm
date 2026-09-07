@@ -535,7 +535,7 @@ export function Workspace() {
           </div>
         </header>
 
-        <div className="flex gap-1 border-b border-border bg-background px-3 py-1 print:hidden md:hidden">
+        <div className="flex shrink-0 gap-1 border-b border-border bg-background px-3 py-1 print:hidden md:hidden">
           <button
             type="button"
             className={cn(
@@ -558,23 +558,23 @@ export function Workspace() {
           </button>
         </div>
 
-        <div className="min-h-0 flex-1">
+        <div className="min-h-0 flex-1 overflow-hidden">
           {isDesktop ? (
-          <Group orientation="horizontal" className="h-full">
-            <Panel defaultSize={46} minSize={28} className="min-h-0 print:hidden">
+          <Group orientation="horizontal" className="h-full min-h-0">
+            <Panel defaultSize={46} minSize={28} className="min-h-0 overflow-hidden print:hidden">
               <CodeEditor value={source} onChange={setSource} onRun={handleRun} focusLine={focusLine} />
             </Panel>
             <ResizeSeparator className="w-px bg-border hover:bg-primary/60 data-[separator=active]:bg-primary print:hidden" />
-            <Panel defaultSize={54} minSize={30} className="min-h-0 bg-paper">
+            <Panel defaultSize={54} minSize={30} className="min-h-0 overflow-hidden bg-paper">
               {paper}
             </Panel>
           </Group>
           ) : (
-          <div className="flex h-full min-h-0 flex-col print:hidden">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden print:hidden">
             {mobileTab === "code" ? (
               <CodeEditor value={source} onChange={setSource} onRun={handleRun} focusLine={focusLine} />
             ) : (
-              <div className="min-h-0 flex-1 bg-paper">{paper}</div>
+              <div className="h-full min-h-0 overflow-hidden bg-paper">{paper}</div>
             )}
           </div>
           )}
