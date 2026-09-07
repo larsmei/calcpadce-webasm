@@ -24,7 +24,7 @@ import { SettingsDialog } from "@/components/editor/settings-dialog";
 import { ExamplesPanel } from "@/components/editor/examples-panel";
 import { SyntaxSheet } from "@/components/editor/syntax-sheet";
 import { bootEngine, optionsForView, parseWorksheet, worksheetParseKey } from "@/lib/calcpad/engine";
-import { applyInputValues } from "@/lib/calcpad/inputs";
+import { applyInputValues, flushPaperControls } from "@/lib/calcpad/inputs";
 import { useCalcpadStore } from "@/lib/calcpad/store";
 import { hasUiDirective, type ViewMode } from "@/lib/calcpad/types";
 import {
@@ -191,6 +191,7 @@ export function Workspace() {
   }, [setResult, setStatus]);
 
   const handleRun = useCallback(() => {
+    commitPaperDom();
     if (useCalcpadStore.getState().viewMode === "form") {
       setViewMode("results");
       return;
@@ -306,7 +307,10 @@ export function Workspace() {
 
   function handleInputs(values: string[]) {
     const next = applyInputValues(sourceRef.current, values);
-    if (next !== sourceRef.current) setSource(next);
+    if (next !== sourceRef.current) {
+      sourceRef.current = next;
+      setSource(next);
+    }
   }
 
   function handleUiChange(next: Record<string, string>) {
@@ -323,7 +327,19 @@ export function Workspace() {
     if (changed) setUiOverrides(merged);
   }
 
+  function commitPaperDom() {
+    const root = document.querySelector<HTMLElement>(".calcpad-paper");
+    if (!root) return;
+    const flushed = flushPaperControls(root);
+    handleInputs(flushed.inputs);
+    handleUiChange(flushed.uiOverrides);
+    if (flushed.units && flushed.units !== useCalcpadStore.getState().options.units) {
+      setOptions({ units: flushed.units });
+    }
+  }
+
   function switchView(next: ViewMode) {
+    if (next === "results") commitPaperDom();
     setViewMode(next);
     setMobileTab("paper");
   }

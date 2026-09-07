@@ -4,7 +4,7 @@
 
 No server is required. Host the static zip on Apache, nginx, or any file server.
 
-Latest release: [v0.3.19](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.19)
+Latest release: [v0.3.20](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.20)
 
 Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE) (MIT).
 
@@ -57,6 +57,18 @@ CalcpadCE widgets:
 M_max = q*L^2/k_M
 #end post
 ```
+
+Classic HTML dropdowns (Calcpad help) map `select[name]` onto `?` fields in `#id`:
+
+```
+'Pick: <select name="pt">
+'<option value="11;12">A</option>
+'<option value="21;22">B</option>
+'</select>
+'<p id="pt">'x = ? {11}', 'y = ? {12}'</p>
+```
+
+Changing the list copies the option value (semicolon-separated) into the boxes. **Calculate** / **Results** then uses those numbers — not the defaults in the source.
 
 ### Screenshots
 
@@ -115,7 +127,7 @@ Acrobat shows the worksheet under the paperclip / Attachments panel.
 
 The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page.
 
-Download **`calcpadce-static-v0.3.19.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+Download **`calcpadce-static-v0.3.20.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
 
 ```
 index.html

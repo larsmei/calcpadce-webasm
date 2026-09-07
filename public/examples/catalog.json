@@ -6,6 +6,12 @@
     "preview": "'<!-- Input form vs calculated report. Switch Form / Results in the toolbar. -->\n'<h2>Simply supported beam</h2>\n#pre\n'<h3>Input data</h3>\n#UI 'Span - 'L = 5m\n"
   },
   {
+    "title": "HTML dropdown form",
+    "file": "html-select-form.cpd",
+    "bytes": 404,
+    "preview": "'<!-- HTML dropdown mapped to ? fields. Change the list, then Calculate / Results. -->\n'<h2>Mapped dropdown</h2>\n#pre\n'<p>Pick a point</p>"
+  },
+  {
     "title": "Foldable Sections",
     "file": "fold-sections.cpd",
     "bytes": 503,
@@ -21,13 +27,13 @@
     "title": "Cylinder Volume",
     "file": "cylinder-volume.cpd",
     "bytes": 85,
-    "preview": "' Calculate the volume of a cylinder\nr = 5 cm\nh = 12 cm\nV = \u03c0 * r^2 * h\nV|dm^3\nV|gal\n"
+    "preview": "' Calculate the volume of a cylinder\nr = 5 cm\nh = 12 cm\nV = π * r^2 * h\nV|dm^3\nV|gal\n"
   },
   {
     "title": "Getting Started / Calculating",
     "file": "calculating.cpd",
     "bytes": 272,
-    "preview": "'Simple calculation:\n1 + 1\n\n'Comparing two values:\n7 > 3\n7 < 3\n\n'Calculation with variables:\na = 2\nb = 3\na*b\n\n'Using built-in constants:\nr = 1.5\nA = \u03c0*r^2\n\n'Integration:\n$Integral{"
+    "preview": "'Simple calculation:\n1 + 1\n\n'Comparing two values:\n7 > 3\n7 < 3\n\n'Calculation with variables:\na = 2\nb = 3\na*b\n\n'Using built-in constants:\nr = 1.5\nA = π*r^2\n\n'Integration:\n$Integral{"
   },
   {
     "title": "Getting Started / Functions",

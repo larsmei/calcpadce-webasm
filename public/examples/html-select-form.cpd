@@ -1,0 +1,15 @@
+'<!-- HTML dropdown mapped to ? fields. Change the list, then Calculate / Results. -->
+'<h2>Mapped dropdown</h2>
+#pre
+'<p>Pick a point</p>
+'<select name="target1">
+'<option value="11;12">x1 ; y1</option>
+'<option value="21;22">x2 ; y2</option>
+'<option value="31;32">x3 ; y3</option>
+'</select>
+'<p id="target1">Values: 'x = ? {11}', 'y = ? {12}'</p>
+#end pre
+#post
+'<h3>Results</h3>
+s = x + y
+#end post

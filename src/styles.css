@@ -166,11 +166,17 @@ body,
   vertical-align: middle;
 }
 
+.calcpad-paper select,
 .calcpad-paper .calcpad-ui-dropdown {
   min-width: 8em;
   max-width: 100%;
+  min-height: 2.25rem;
   margin: 0 2pt;
   vertical-align: middle;
+  appearance: auto;
+  background-color: #fffde8;
+  color: #111;
+  opacity: 1;
 }
 
 .calcpad-paper .calcpad-ui-radio {

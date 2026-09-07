@@ -1,10 +1,13 @@
 import { useEffect, useRef } from "react";
 import {
+  applyMappedWidgets,
   collectPaperInputs,
   collectUiOverrides,
   formHtml,
   hydrateUiDatagrids,
+  isMappedWidget,
   isPaperControl,
+  syncMappedWidgets,
 } from "@/lib/calcpad/inputs";
 import { collapsePaperFolds, foldFromHeaderClick } from "@/lib/calcpad/paper-fold";
 import { runEmbeddedScripts } from "@/lib/calcpad/run-scripts";
@@ -107,6 +110,11 @@ export function Paper({
     const onChange = (e: Event) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
+      if (isMappedWidget(target)) {
+        applyMappedWidgets(root);
+        commitInputs();
+        return;
+      }
       if (target.closest("[data-ui-var]")) {
         commitUi();
         return;
@@ -123,9 +131,11 @@ export function Paper({
 
     hydrateUiDatagrids(root);
     collapsePaperFolds(root);
+    syncMappedWidgets(root);
 
     root.addEventListener("click", onClick);
     root.addEventListener("change", onChange);
+    root.addEventListener("input", onChange);
     root.addEventListener("keydown", onKey);
     root.querySelectorAll(".dvcs:has(.block) > :first-child").forEach((el) => {
       (el as HTMLElement).innerHTML = "&hairsp;";
@@ -139,6 +149,7 @@ export function Paper({
       ac.abort();
       root.removeEventListener("click", onClick);
       root.removeEventListener("change", onChange);
+      root.removeEventListener("input", onChange);
       root.removeEventListener("keydown", onKey);
     };
   }, [html, viewMode]);

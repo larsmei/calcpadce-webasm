@@ -65,6 +65,12 @@ export const CHEATSHEET: CheatSection[] = [
     blurb: "Form (F4) shows input boxes. Results (F5) shows the calculated report. Calculate in Form switches to Results.",
     rows: [
       { name: "Classic input", syntax: "r = ? {5} cm", note: "Box in Form, value in Results." },
+      {
+        name: "HTML dropdown",
+        syntax:
+          "'<select name=\"pt\">\n'<option value=\"11;12\">A</option>\n'<option value=\"21;22\">B</option>\n'</select>\n'<p id=\"pt\">'x = ? {11}', 'y = ? {12}'</p>",
+        note: "Option value is copied into the ? boxes (semicolon-separated). Then Calculate.",
+      },
       { name: "UI field", syntax: "#UI 'Span - 'L = 5m" },
       {
         name: "Dropdown",
