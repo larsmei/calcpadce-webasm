@@ -4,7 +4,7 @@
 
 No server is required. Host the static zip on Apache, nginx, or any file server.
 
-Latest release: [v0.3.18](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.18)
+Latest release: [v0.3.19](https://github.com/larsmei/calcpadce-webasm/releases/tag/v0.3.19)
 
 Upstream engine: [imartincei/CalcpadCE](https://github.com/imartincei/CalcpadCE) (MIT).
 
@@ -88,7 +88,7 @@ Sections start **collapsed** when the report opens. **PDF export** writes them c
 
 ### Cheatsheet
 
-The CPU icon in the toolbar opens a **full language reference** (keywords, `$` commands, units, Form/Results, HTML/SVG). On a phone it is a full-screen overlay that scrolls. Search filters the list; tap a line to insert it at the source cursor.
+**?** in the status bar opens a **full language reference** (keywords, `$` commands, units, Form/Results, HTML/SVG). On a phone it is a full-screen overlay that scrolls. Search filters the list; tap a line to insert it at the source cursor.
 
 ### Embedded SVG
 
@@ -115,7 +115,7 @@ Acrobat shows the worksheet under the paperclip / Attachments panel.
 
 The Blazor `_framework` folder is **only the calculation engine**. Hosting that zip alone shows a blank page.
 
-Download **`calcpadce-static-v0.3.18.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
+Download **`calcpadce-static-v0.3.19.zip`** from [Releases](https://github.com/larsmei/calcpadce-webasm/releases) and unpack it **into the document root** (replace existing files):
 
 ```
 index.html

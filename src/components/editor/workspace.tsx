@@ -9,7 +9,6 @@ import {
   RotateCcw,
   Settings2,
   SquareAsterisk,
-  Cpu,
   Pencil,
 } from "lucide-react";
 import { Group, Panel, Separator as ResizeSeparator } from "react-resizable-panels";
@@ -437,14 +436,6 @@ export function Workspace() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button size="icon-sm" variant="ghost" aria-label="Cheatsheet" onClick={() => setSyntaxOpen(true)}>
-                  <Cpu className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Cheatsheet</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
                 <Button size="icon-sm" variant="ghost" onClick={() => fileRef.current?.click()}>
                   <FileUp className="size-4" />
                 </Button>
@@ -636,11 +627,11 @@ export function Workspace() {
                   type="button"
                   size="sm"
                   variant="ghost"
-                  className="h-8 px-2 md:hidden"
+                  className="h-7 min-w-7 px-2 text-sm"
                   aria-label="Cheatsheet"
                   onClick={() => setSyntaxOpen(true)}
                 >
-                  <Cpu className="size-3.5" />
+                  ?
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Cheatsheet</TooltipContent>
