@@ -3,20 +3,20 @@
 @import "./styles-calcpad-paper.css";
 
 @theme {
-  --color-background: oklch(98.5% 0 0);
-  --color-foreground: oklch(21% 0.03 265);
-  --color-elevated: oklch(100% 0 0);
-  --color-muted: oklch(96% 0.005 260);
-  --color-muted-foreground: oklch(55% 0.02 264);
-  --color-border: oklch(87% 0.01 258);
+  --color-background: #f7f8fa;
+  --color-foreground: #1c2430;
+  --color-elevated: #ffffff;
+  --color-muted: #e8eaee;
+  --color-muted-foreground: #5c6570;
+  --color-border: #d5d8de;
   --color-primary: #006db0;
   --color-primary-foreground: #ffffff;
-  --color-secondary: oklch(96% 0.005 260);
-  --color-secondary-foreground: oklch(21% 0.03 265);
-  --color-destructive: oklch(44% 0.16 27);
+  --color-secondary: #e8eaee;
+  --color-secondary-foreground: #1c2430;
+  --color-destructive: #b42318;
   --color-ring: #23a9f2;
   --color-paper: #ffffff;
-  --color-paper-ink: oklch(21% 0.03 265);
+  --color-paper-ink: #1c2430;
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -66,13 +66,55 @@ body,
 .calcpad-paper {
   margin: 0 !important;
   max-width: none !important;
-  min-height: 0 !important;
-  height: 100%;
-  max-height: 100%;
+  min-height: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
   color: var(--color-paper-ink);
-  background: var(--color-paper);
+  background: #ffffff;
   font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.app-shell {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  height: 100%;
+  height: 100svh;
+  max-height: 100dvh;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f7f8fa;
+  color: #1c2430;
+}
+
+.paper-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  background: #ffffff;
+}
+
+.greek-bar {
+  position: relative;
+  z-index: 30;
+  isolation: isolate;
+  flex-shrink: 0;
+  background: #e8eaee;
+  color: #1c2430;
+  border-top: 1px solid #d5d8de;
+}
+
+.greek-bar button {
+  background: #ffffff;
+  color: #1c2430;
 }
 
 .calcpad-paper img:not(.worksheet-image) {
@@ -215,9 +257,21 @@ body,
   footer {
     display: none !important;
   }
+  .app-shell {
+    position: static !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .paper-scroll {
+    position: static !important;
+    inset: auto !important;
+    overflow: visible !important;
+  }
   .calcpad-paper {
     overflow: visible !important;
     height: auto !important;
+    min-height: 0 !important;
     background: white !important;
   }
 }

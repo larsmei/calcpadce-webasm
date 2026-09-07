@@ -40,6 +40,14 @@ import { exportPdfReport } from "@/lib/calcpad/export-pdf";
 import { readUiOverrides } from "@/lib/calcpad/worksheet-meta";
 import { ensureCpdFileName } from "@/lib/calcpad/file-name";
 
+function ReportScroll({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative h-full min-h-0 overflow-hidden bg-paper">
+      <div className="paper-scroll">{children}</div>
+    </div>
+  );
+}
+
 function downloadText(filename: string, contents: string, mime: string) {
   const blob = new Blob([contents], { type: mime });
   const url = URL.createObjectURL(blob);
@@ -339,7 +347,7 @@ export function Workspace() {
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-background text-foreground print:static print:h-auto print:overflow-visible">
+      <div className="app-shell print:static print:h-auto print:overflow-visible">
         <header className="relative z-20 flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-border bg-background px-3 pb-1.5 pt-[max(0.375rem,env(safe-area-inset-top))] print:hidden md:px-4">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="grid size-8 place-items-center rounded-[var(--radius-sm)] bg-primary text-primary-foreground">
@@ -566,7 +574,7 @@ export function Workspace() {
             </Panel>
             <ResizeSeparator className="w-px bg-border hover:bg-primary/60 data-[separator=active]:bg-primary print:hidden" />
             <Panel defaultSize={54} minSize={30} className="min-h-0 overflow-hidden bg-paper">
-              {paper}
+              <ReportScroll>{paper}</ReportScroll>
             </Panel>
           </Group>
           ) : (
@@ -574,7 +582,9 @@ export function Workspace() {
             {mobileTab === "code" ? (
               <CodeEditor value={source} onChange={setSource} onRun={handleRun} focusLine={focusLine} />
             ) : (
-              <div className="h-full min-h-0 overflow-hidden bg-paper">{paper}</div>
+              <div className="h-full min-h-0 overflow-hidden bg-paper">
+                <ReportScroll>{paper}</ReportScroll>
+              </div>
             )}
           </div>
           )}
@@ -589,7 +599,7 @@ export function Workspace() {
           />
         ) : null}
 
-        <footer className="relative z-20 flex min-h-11 shrink-0 items-center gap-3 border-t border-border bg-background px-3 text-xs text-muted-foreground print:hidden pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+        <footer className="relative z-30 flex min-h-11 shrink-0 items-center gap-3 border-t border-border bg-background px-3 text-xs text-muted-foreground print:hidden pb-[max(0.25rem,env(safe-area-inset-bottom))]">
           <span
             className={cn(
               "inline-flex items-center gap-1.5",

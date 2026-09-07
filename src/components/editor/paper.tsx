@@ -171,7 +171,7 @@ export function Paper({
   return (
     <div
       ref={ref}
-      className={cn("calcpad-paper h-full min-h-0 overflow-auto px-6 py-6 md:px-10 md:py-8", className)}
+      className={cn("calcpad-paper min-h-full overflow-visible px-6 pb-16 pt-6 md:px-10 md:pb-12 md:pt-8", className)}
       data-view={viewMode}
       dangerouslySetInnerHTML={{ __html: formHtml(html, viewMode) }}
     />
